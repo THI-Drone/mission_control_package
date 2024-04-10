@@ -39,8 +39,8 @@ public:
   MinimalSubscriber()
   : Node("minimal_subscriber")
   {
-    heartbeat_map["node_1"] = heartbeat_payload();
-    heartbeat_map["node_2"] = heartbeat_payload();
+    heartbeat_map["/node_1"] = heartbeat_payload();
+    heartbeat_map["/node_2"] = heartbeat_payload();
 
     subscription_ = this->create_subscription<interfaces::msg::Heartbeat>(
       "heartbeat", 10, std::bind(&MinimalSubscriber::topic_callback, this, _1));
