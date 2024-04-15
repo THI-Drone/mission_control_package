@@ -22,14 +22,14 @@ struct heartbeat_payload {
 class MissionControl : public rclcpp::Node
 {
 private:
-    rclcpp::TimerBase::SharedPtr timer_;
-    rclcpp::Subscription<interfaces::msg::Heartbeat>::SharedPtr subscription_;
+    rclcpp::TimerBase::SharedPtr heartbeat_timer;
+    rclcpp::Subscription<interfaces::msg::Heartbeat>::SharedPtr heartbeat_subscription;
     std::map<std::string, heartbeat_payload> heartbeat_map;
 
 public:
     MissionControl();
 
 private:
-    void topic_callback(const interfaces::msg::Heartbeat &msg);
-    void timer_callback();
+    void heartbeat_callback(const interfaces::msg::Heartbeat &msg);
+    void heartbeat_timer_callback();
 };

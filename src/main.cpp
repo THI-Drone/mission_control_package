@@ -1,21 +1,21 @@
 #include "main.hpp"
 
-
 using std::placeholders::_1;
 using namespace std::chrono_literals;
+
 
 MissionControl::MissionControl() : Node("mission_control")
 {
   heartbeat_map["/node_1"] = heartbeat_payload();
   heartbeat_map["/node_2"] = heartbeat_payload();
 
-  subscription_ = this->create_subscription<interfaces::msg::Heartbeat>(
-    "heartbeat", 10, std::bind(&MissionControl::topic_callback, this, _1));
-  timer_ = this->create_wall_timer(
-    1000ms, std::bind(&MissionControl::timer_callback, this));
+  heartbeat_subscription = this->create_subscription<interfaces::msg::Heartbeat>(
+    "heartbeat", 10, std::bind(&MissionControl::heartbeat_callback, this, _1));
+  heartbeat_timer = this->create_wall_timer(
+    1000ms, std::bind(&MissionControl::heartbeat_timer_callback, this));
 }
 
-void MissionControl::topic_callback(const interfaces::msg::Heartbeat &msg)
+void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg)
 {
   if(heartbeat_map.find(msg.sender_id) == heartbeat_map.end()) {
       RCLCPP_ERROR(this->get_logger(), "Received unregistered heartbeat: %s", msg.sender_id.c_str());
@@ -33,7 +33,7 @@ void MissionControl::topic_callback(const interfaces::msg::Heartbeat &msg)
   //RCLCPP_INFO(this->get_logger(), "I heard: '%s', tick: %u, active: %d", msg.sender_id.c_str(), msg.tick, msg.active);
 }
 
-void MissionControl::timer_callback()
+void MissionControl::heartbeat_timer_callback()
 {
   bool err_flag = false;
 
