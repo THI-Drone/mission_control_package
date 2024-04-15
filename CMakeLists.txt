@@ -9,11 +9,10 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(interfaces REQUIRED)
-# uncomment the following section in order to fill in
-# further dependencies manually.
-# find_package(<dependency> REQUIRED)
 
-add_executable(mission_control_node src/subscriber_member_function.cpp)
+include_directories(include)
+
+add_executable(mission_control_node src/main.cpp)
 ament_target_dependencies(mission_control_node rclcpp interfaces)
 
 install(TARGETS
