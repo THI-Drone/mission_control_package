@@ -12,6 +12,7 @@
 
 // Message includes
 #include "interfaces/msg/heartbeat.hpp"
+#include "interfaces/msg/control.hpp"
 
 
 /**
@@ -55,6 +56,9 @@ private:
     bool event_loop_active = true;
     rclcpp::TimerBase::SharedPtr event_loop_timer;
 
+    // Fail-Safe Checks
+    rclcpp::Subscription<interfaces::msg::Control>::SharedPtr control_subscription;
+
     // Heartbeat
     rclcpp::TimerBase::SharedPtr heartbeat_timer;
     rclcpp::Subscription<interfaces::msg::Heartbeat>::SharedPtr heartbeat_subscription;
@@ -72,6 +76,9 @@ private:
 
     // Mission Abort
     void mission_abort(std::string reason);
+
+    // Fail-Safe checks
+    void check_control(const interfaces::msg::Control &msg);
 
     // Heartbeat
     void heartbeat_callback(const interfaces::msg::Heartbeat &msg);
