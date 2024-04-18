@@ -2,38 +2,42 @@
 
 using std::placeholders::_1;
 
-MissionControl::MissionControl() : CommonNode("mission_control")
+MissionControl::MissionControl()
+: CommonNode("mission_control")
 {
-    // Register nodes
-    const std::string node_names[] = {"/node_1", "/node_2"};
+  // Register nodes
+  const std::string node_names[] = {"/node_1", "/node_2"};
 
-    for (const std::string &name : node_names)
-    {
-        node_map[name] = ros_node();
-    }
+  for (const std::string & name : node_names) {
+    node_map[name] = ros_node();
+  }
 
-    // Allowing node_1 to start the mission
-    node_map["/node_1"].can_start_mission = true; // TODO change with real node_id
+  // Allowing node_1 to start the mission
+  node_map["/node_1"].can_start_mission = true;   // TODO change with real node_id
 
-    // Initialize Heartbeat
-    heartbeat_subscription = this->create_subscription<interfaces::msg::Heartbeat>(
-        "heartbeat", 1, std::bind(&MissionControl::heartbeat_callback, this, _1));
-    heartbeat_timer = this->create_wall_timer(
-        1000ms, std::bind(&MissionControl::heartbeat_timer_callback, this));
+  // Initialize Heartbeat
+  heartbeat_subscription = this->create_subscription<interfaces::msg::Heartbeat>(
+    "heartbeat", 1, std::bind(&MissionControl::heartbeat_callback, this, _1));
+  heartbeat_timer = this->create_wall_timer(
+    1000ms, std::bind(&MissionControl::heartbeat_timer_callback, this));
 
-    // Mission Start
-    mission_start_subscription = this->create_subscription<interfaces::msg::MissionStart>(
-        "mission_start", 10, std::bind(&MissionControl::mission_start, this, _1));
+  // Mission Start
+  mission_start_subscription = this->create_subscription<interfaces::msg::MissionStart>(
+    "mission_start", 10, std::bind(&MissionControl::mission_start, this, _1));
 
-    // Mission Abort
-    mission_abort_publisher = this->create_publisher<interfaces::msg::MissionAbort>("mission_abort", 10);
+  // Mission Abort
+  mission_abort_publisher = this->create_publisher<interfaces::msg::MissionAbort>(
+    "mission_abort",
+    10);
 
-    // Fail-Safe checks
-    control_subscription = this->create_subscription<interfaces::msg::FlyToCoord>(
-        "fly_to_coord", 10, std::bind(&MissionControl::check_control, this, _1));
+  // Fail-Safe checks
+  control_subscription = this->create_subscription<interfaces::msg::FlyToCoord>(
+    "fly_to_coord", 10, std::bind(&MissionControl::check_control, this, _1));
 
-    // Initialize Event Loop
-    event_loop_timer = this->create_wall_timer(std::chrono::milliseconds(event_loop_time_delta_ms), std::bind(&MissionControl::event_loop, this));
+  // Initialize Event Loop
+  event_loop_timer = this->create_wall_timer(
+    std::chrono::milliseconds(
+      event_loop_time_delta_ms), std::bind(&MissionControl::event_loop, this));
 }
 
 /**
@@ -46,27 +50,29 @@ MissionControl::MissionControl() : CommonNode("mission_control")
  */
 void MissionControl::event_loop()
 {
-    if (!event_loop_active)
-        return;
+  if (!event_loop_active) {
+    return;
+  }
 
-    switch (get_mission_state())
-    {
+  switch (get_mission_state()) {
     case selfcheck:
-        mode_self_check();
-        break;
+      mode_self_check();
+      break;
     case armed:
-        set_standby_config();
-        break;
+      set_standby_config();
+      break;
     case takeoff:
-        initiate_takeoff();
-        break;
+      initiate_takeoff();
+      break;
 
-        // TODO implement other cases
+    // TODO implement other cases
 
     default:
-        RCLCPP_ERROR(this->get_logger(), "MissionControl::event_loop: Unknown mission_state: %d", get_mission_state());
-        mission_abort("MissionControl::event_loop: Unknown mission_state");
-    }
+      RCLCPP_ERROR(
+        this->get_logger(), "MissionControl::event_loop: Unknown mission_state: %d",
+        get_mission_state());
+      mission_abort("MissionControl::event_loop: Unknown mission_state");
+  }
 }
 
 /**
@@ -76,7 +82,7 @@ void MissionControl::event_loop()
  */
 void MissionControl::set_standby_config()
 {
-    active_node = "";
+  active_node = "";
 }
 
 /**
@@ -89,12 +95,15 @@ void MissionControl::set_standby_config()
  */
 void MissionControl::set_mission_state(const MissionState_t new_mission_state)
 {
-    if (mission_state != new_mission_state)
-        state_first_loop = true;
+  if (mission_state != new_mission_state) {
+    state_first_loop = true;
+  }
 
-    mission_state = new_mission_state;
+  mission_state = new_mission_state;
 
-    RCLCPP_DEBUG(this->get_logger(), "MissionControl::set_mission_state: Set mission state to %d", mission_state);
+  RCLCPP_DEBUG(
+    this->get_logger(), "MissionControl::set_mission_state: Set mission state to %d",
+    mission_state);
 }
 
 /**
@@ -107,13 +116,14 @@ void MissionControl::set_mission_state(const MissionState_t new_mission_state)
  */
 bool MissionControl::get_state_first_loop()
 {
-    // Check if first loop was already triggered
-    if (!state_first_loop)
-        return false;
+  // Check if first loop was already triggered
+  if (!state_first_loop) {
+    return false;
+  }
 
-    // Set first loop to false and return true
-    state_first_loop = false;
-    return true;
+  // Set first loop to false and return true
+  state_first_loop = false;
+  return true;
 }
 
 /**
@@ -125,37 +135,37 @@ bool MissionControl::get_state_first_loop()
  */
 void MissionControl::mode_self_check()
 {
-    static uint32_t i;
+  static uint32_t i;
 
-    if (get_state_first_loop())
-    {
-        RCLCPP_INFO(this->get_logger(), "MissionControl::mode_self_check: Self check started");
-        set_standby_config();
-        i = 0;
+  if (get_state_first_loop()) {
+    RCLCPP_INFO(this->get_logger(), "MissionControl::mode_self_check: Self check started");
+    set_standby_config();
+    i = 0;
 
-        // TODO implement waiting for good GPS signal
-    }
+    // TODO implement waiting for good GPS signal
+  }
 
-    const uint32_t max_wait_time = (30 * 1000) / event_loop_time_delta_ms;
-    if (i % (1000 / event_loop_time_delta_ms) == 0)
-    {
-        RCLCPP_INFO(this->get_logger(), "MissionControl::mode_self_check: Waiting for heartbeats: %us / %us", (i * event_loop_time_delta_ms) / 1000, (max_wait_time * event_loop_time_delta_ms) / 1000);
-    }
+  const uint32_t max_wait_time = (30 * 1000) / event_loop_time_delta_ms;
+  if (i % (1000 / event_loop_time_delta_ms) == 0) {
+    RCLCPP_INFO(
+      this->get_logger(), "MissionControl::mode_self_check: Waiting for heartbeats: %us / %us",
+      (i * event_loop_time_delta_ms) / 1000, (max_wait_time * event_loop_time_delta_ms) / 1000);
+  }
 
-    i++;
+  i++;
 
-    if (i >= max_wait_time)
-    {
-        RCLCPP_ERROR(this->get_logger(), "MissionControl::mode_self_check: Self check failed: Not all heartbeats received in the given timeframe (%us)", (max_wait_time * event_loop_time_delta_ms) / 1000);
-        mission_abort("Self check failed: Not all heartbeats received in the given timeframe");
-    }
+  if (i >= max_wait_time) {
+    RCLCPP_ERROR(
+      this->get_logger(), "MissionControl::mode_self_check: Self check failed: Not all heartbeats received in the given timeframe (%us)",
+      (max_wait_time * event_loop_time_delta_ms) / 1000);
+    mission_abort("Self check failed: Not all heartbeats received in the given timeframe");
+  }
 
-    if (heartbeat_received_all)
-    {
-        RCLCPP_INFO(this->get_logger(), "MissionControl::mode_self_check: Self check finished");
-        set_mission_state(armed);
-        RCLCPP_INFO(this->get_logger(), "MissionControl::mode_self_check: Mission Control armed");
-    }
+  if (heartbeat_received_all) {
+    RCLCPP_INFO(this->get_logger(), "MissionControl::mode_self_check: Self check finished");
+    set_mission_state(armed);
+    RCLCPP_INFO(this->get_logger(), "MissionControl::mode_self_check: Mission Control armed");
+  }
 }
 
 /**
@@ -166,58 +176,60 @@ void MissionControl::mode_self_check()
  *
  * @param msg The mission start command message
  */
-void MissionControl::mission_start(const interfaces::msg::MissionStart &msg)
+void MissionControl::mission_start(const interfaces::msg::MissionStart & msg)
 {
-    RCLCPP_INFO(this->get_logger(), "MissionControl::mission_start: Received mission start command from %s", msg.sender_id.c_str());
+  RCLCPP_INFO(
+    this->get_logger(), "MissionControl::mission_start: Received mission start command from %s",
+    msg.sender_id.c_str());
 
-    // Check mission state is armed
-    if (get_mission_state() != armed)
-    {
-        RCLCPP_ERROR(get_logger(), "Mission start command received without being in 'armed' state");
-        return;
-    }
+  // Check mission state is armed
+  if (get_mission_state() != armed) {
+    RCLCPP_ERROR(get_logger(), "Mission start command received without being in 'armed' state");
+    return;
+  }
 
-    // Check that sender node id is known
-    if (node_map.find(msg.sender_id) == node_map.end())
-    {
-        RCLCPP_ERROR(get_logger(), "MissionControl::mission_start: Sender node unknown: %s", msg.sender_id.c_str());
-        return;
-    }
+  // Check that sender node id is known
+  if (node_map.find(msg.sender_id) == node_map.end()) {
+    RCLCPP_ERROR(
+      get_logger(), "MissionControl::mission_start: Sender node unknown: %s",
+      msg.sender_id.c_str());
+    return;
+  }
 
-    // Check that sender has permission to start mission
-    if (!node_map[msg.sender_id].can_start_mission)
-    {
-        RCLCPP_ERROR(get_logger(), "MissionControl::mission_start: Sender is not allowed to start the mission: %s", msg.sender_id.c_str());
-        return;
-    }
+  // Check that sender has permission to start mission
+  if (!node_map[msg.sender_id].can_start_mission) {
+    RCLCPP_ERROR(
+      get_logger(), "MissionControl::mission_start: Sender is not allowed to start the mission: %s",
+      msg.sender_id.c_str());
+    return;
+  }
 
-    // Start mission
-    RCLCPP_INFO(this->get_logger(), "MissionControl::mission_start: Mission started");
-    set_mission_state(takeoff);
-    RCLCPP_INFO(this->get_logger(), "MissionControl::mission_start: Takeoff initiated");
+  // Start mission
+  RCLCPP_INFO(this->get_logger(), "MissionControl::mission_start: Mission started");
+  set_mission_state(takeoff);
+  RCLCPP_INFO(this->get_logger(), "MissionControl::mission_start: Takeoff initiated");
 }
 
 void MissionControl::initiate_takeoff()
 {
-    // TODO CONTINUE HERE
+  // TODO CONTINUE HERE
 
-    if (get_state_first_loop())
-    {
-        RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Takeoff initated");
+  if (get_state_first_loop()) {
+    RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Takeoff initated");
 
-        // TODO check if drone is in the air -> abort if false
+    // TODO check if drone is in the air -> abort if false
 
-        // TODO save takeoff coordinates
+    // TODO save takeoff coordinates
 
-        // TODO initiate takeoff
-    }
+    // TODO initiate takeoff
+  }
 
-    // TODO monitor takeoff
+  // TODO monitor takeoff
 
-    // If takeoff finished
-    RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Takeoff finished");
-    set_mission_state(waypoint);
-    RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Waypoint state activated");
+  // If takeoff finished
+  RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Takeoff finished");
+  set_mission_state(waypoint);
+  RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Waypoint state activated");
 }
 
 /**
@@ -230,17 +242,20 @@ void MissionControl::initiate_takeoff()
  */
 void MissionControl::mission_abort(std::string reason)
 {
-    RCLCPP_FATAL(this->get_logger(), "MissionControl::mission_abort: Aborting mission, reason: %s", reason.c_str());
+  RCLCPP_FATAL(
+    this->get_logger(), "MissionControl::mission_abort: Aborting mission, reason: %s",
+    reason.c_str());
 
-    // Publish abort message
-    auto msg = interfaces::msg::MissionAbort();
-    msg.sender_id = get_fully_qualified_name();
-    msg.reason = reason;
-    mission_abort_publisher->publish(msg);
+  // Publish abort message
+  auto msg = interfaces::msg::MissionAbort();
+  msg.sender_id = get_fully_qualified_name();
+  msg.reason = reason;
+  mission_abort_publisher->publish(msg);
 
-    // Stop node
-    RCLCPP_INFO(this->get_logger(), "MissionControl::mission_abort: Mission abort message sent, exiting now");
-    exit(EXIT_FAILURE);
+  // Stop node
+  RCLCPP_INFO(
+    this->get_logger(), "MissionControl::mission_abort: Mission abort message sent, exiting now");
+  exit(EXIT_FAILURE);
 }
 
 // Fail-Safe checks
@@ -251,14 +266,18 @@ void MissionControl::mission_abort(std::string reason)
  *
  * @param msg The FlyToCoord message to be checked.
  */
-void MissionControl::check_control(const interfaces::msg::FlyToCoord &msg)
+void MissionControl::check_control(const interfaces::msg::FlyToCoord & msg)
 {
-    RCLCPP_DEBUG(this->get_logger(), "MissionControl::check_control: Checking FlyToCoord message from %s", msg.sender_id.c_str());
+  RCLCPP_DEBUG(
+    this->get_logger(), "MissionControl::check_control: Checking FlyToCoord message from %s",
+    msg.sender_id.c_str());
 
-    if (msg.sender_id != active_node)
-        mission_abort("Unauthorized node sending on fly_to_coord topic registered");
+  if (msg.sender_id != active_node) {
+    mission_abort("Unauthorized node sending on fly_to_coord topic registered");
+  }
 
-    RCLCPP_DEBUG(this->get_logger(), "MissionControl::check_control: Checking FlyToCoord message successfull");
+  RCLCPP_DEBUG(
+    this->get_logger(), "MissionControl::check_control: Checking FlyToCoord message successfull");
 }
 
 // Heartbeat
@@ -275,41 +294,48 @@ void MissionControl::check_control(const interfaces::msg::FlyToCoord &msg)
  *
  * @param msg The received heartbeat message.
  */
-void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg)
+void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat & msg)
 {
-    // Throw away own heartbeat
-    if (msg.sender_id == get_fully_qualified_name())
-        return;
+  // Throw away own heartbeat
+  if (msg.sender_id == get_fully_qualified_name()) {
+    return;
+  }
 
-    if (node_map.find(msg.sender_id) == node_map.end())
-    {
-        RCLCPP_ERROR(get_logger(), "MissionControl::heartbeat_callback: Received unregistered heartbeat: %s", msg.sender_id.c_str());
-        return;
-    }
+  if (node_map.find(msg.sender_id) == node_map.end()) {
+    RCLCPP_ERROR(
+      get_logger(), "MissionControl::heartbeat_callback: Received unregistered heartbeat: %s",
+      msg.sender_id.c_str());
+    return;
+  }
 
-    // Check that active state matches the internal state
-    if (msg.active && (msg.sender_id != active_node))
-    {
-        RCLCPP_FATAL(get_logger(), "MissionControl::heartbeat_callback: Node '%s' is active even though it should be deactive", msg.sender_id.c_str());
-        mission_abort("A node was active even though it should be deactive");
-    }
-    if ((!msg.active) && (msg.sender_id == active_node))
-    {
-        RCLCPP_FATAL(get_logger(), "MissionControl::heartbeat_callback: Node '%s' is deactive even though it should be active", msg.sender_id.c_str());
-        mission_abort("A node was deactive even though it should be active");
-    }
+  // Check that active state matches the internal state
+  if (msg.active && (msg.sender_id != active_node)) {
+    RCLCPP_FATAL(
+      get_logger(), "MissionControl::heartbeat_callback: Node '%s' is active even though it should be deactive",
+      msg.sender_id.c_str());
+    mission_abort("A node was active even though it should be deactive");
+  }
+  if ((!msg.active) && (msg.sender_id == active_node)) {
+    RCLCPP_FATAL(
+      get_logger(), "MissionControl::heartbeat_callback: Node '%s' is deactive even though it should be active",
+      msg.sender_id.c_str());
+    mission_abort("A node was deactive even though it should be active");
+  }
 
-    // Check tick
-    heartbeat_payload &heartbeat = node_map[msg.sender_id].hb_payload;
-    if ((msg.tick == heartbeat.tick) || (msg.tick <= heartbeat.tick && msg.tick != 0))
-    {
-        RCLCPP_ERROR(get_logger(), "MissionControl::heartbeat_callback: Invalid tick received from: %s", msg.sender_id.c_str());
-        return;
-    }
-    heartbeat.tick = msg.tick;
-    heartbeat.received = true;
+  // Check tick
+  heartbeat_payload & heartbeat = node_map[msg.sender_id].hb_payload;
+  if ((msg.tick == heartbeat.tick) || (msg.tick <= heartbeat.tick && msg.tick != 0)) {
+    RCLCPP_ERROR(
+      get_logger(), "MissionControl::heartbeat_callback: Invalid tick received from: %s",
+      msg.sender_id.c_str());
+    return;
+  }
+  heartbeat.tick = msg.tick;
+  heartbeat.received = true;
 
-    RCLCPP_DEBUG(this->get_logger(), "Received heartbeat from: '%s', tick: %u, active: %d", msg.sender_id.c_str(), msg.tick, msg.active);
+  RCLCPP_DEBUG(
+    this->get_logger(), "Received heartbeat from: '%s', tick: %u, active: %d",
+    msg.sender_id.c_str(), msg.tick, msg.active);
 }
 
 /**
@@ -321,40 +347,37 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg)
  */
 void MissionControl::heartbeat_timer_callback()
 {
-    bool err_flag = false;
+  bool err_flag = false;
 
-    for (auto &nm : node_map)
-    {
-        heartbeat_payload &hp = nm.second.hb_payload;
+  for (auto & nm : node_map) {
+    heartbeat_payload & hp = nm.second.hb_payload;
 
-        if (hp.received == false)
-        {
-            err_flag = true;
-            RCLCPP_FATAL(this->get_logger(), "MissionControl::heartbeat_timer_callback: No heartbeat from '%s' received!", nm.first.c_str());
-        }
-
-        hp.received = false;
+    if (hp.received == false) {
+      err_flag = true;
+      RCLCPP_FATAL(
+        this->get_logger(), "MissionControl::heartbeat_timer_callback: No heartbeat from '%s' received!",
+        nm.first.c_str());
     }
 
-    heartbeat_received_all = !err_flag;
+    hp.received = false;
+  }
 
-    if (heartbeat_received_all)
-    {
-        RCLCPP_DEBUG(this->get_logger(), "MissionControl::heartbeat_timer_callback: All heartbeats received");
+  heartbeat_received_all = !err_flag;
+
+  if (heartbeat_received_all) {
+    RCLCPP_DEBUG(
+      this->get_logger(), "MissionControl::heartbeat_timer_callback: All heartbeats received");
+  } else {
+    if (get_mission_state() != selfcheck) {
+      mission_abort("Missing heartbeat while not in 'selfcheck' state");
     }
-    else
-    {
-        if (get_mission_state() != selfcheck)
-        {
-            mission_abort("Missing heartbeat while not in 'selfcheck' state");
-        }
-    }
+  }
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char * argv[])
 {
-    rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<MissionControl>());
-    rclcpp::shutdown();
-    return 0;
+  rclcpp::init(argc, argv);
+  rclcpp::spin(std::make_shared<MissionControl>());
+  rclcpp::shutdown();
+  return 0;
 }

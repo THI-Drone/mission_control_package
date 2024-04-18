@@ -23,76 +23,76 @@
  */
 typedef enum MissionState
 {
-    selfcheck,
-    armed,
-    takeoff,
-    waypoint,
-    marker_recognition,
-    drop_payload,
-    rth,
-    land,
+  selfcheck,
+  armed,
+  takeoff,
+  waypoint,
+  marker_recognition,
+  drop_payload,
+  rth,
+  land,
 } MissionState_t;
 
 class MissionControl : public CommonNode
 {
 private:
-    // General
-    MissionState_t mission_state = selfcheck; /// Main mission state
-    bool state_first_loop = true;             /// If set to true, the first event loop after a mission_state change is happening. Manually set to false in your function after first call.
-    std::map<std::string, ros_node> node_map; /// Has an entry for every ros node
-    std::string active_node = "";             /// node_id that is currently allowed to send data to the FCC interface, set to "" if none is allowed
+  // General
+  MissionState_t mission_state = selfcheck;   /// Main mission state
+  bool state_first_loop = true;               /// If set to true, the first event loop after a mission_state change is happening. Manually set to false in your function after first call.
+  std::map<std::string, ros_node> node_map;   /// Has an entry for every ros node
+  std::string active_node = "";               /// node_id that is currently allowed to send data to the FCC interface, set to "" if none is allowed
 
-    // Event Loop
-    const uint32_t event_loop_time_delta_ms = 100;
-    bool event_loop_active = true; /// If set to true, the event loop will be executed periodically
-    rclcpp::TimerBase::SharedPtr event_loop_timer;
+  // Event Loop
+  const uint32_t event_loop_time_delta_ms = 100;
+  bool event_loop_active = true;   /// If set to true, the event loop will be executed periodically
+  rclcpp::TimerBase::SharedPtr event_loop_timer;
 
-    // Mission Start
-    rclcpp::Subscription<interfaces::msg::MissionStart>::SharedPtr mission_start_subscription;
+  // Mission Start
+  rclcpp::Subscription<interfaces::msg::MissionStart>::SharedPtr mission_start_subscription;
 
-    // Mission Abort
-    rclcpp::Publisher<interfaces::msg::MissionAbort>::SharedPtr mission_abort_publisher;
+  // Mission Abort
+  rclcpp::Publisher<interfaces::msg::MissionAbort>::SharedPtr mission_abort_publisher;
 
-    // Fail-Safe Checks
-    rclcpp::Subscription<interfaces::msg::FlyToCoord>::SharedPtr control_subscription;
+  // Fail-Safe Checks
+  rclcpp::Subscription<interfaces::msg::FlyToCoord>::SharedPtr control_subscription;
 
-    // Heartbeat
-    bool heartbeat_received_all = false; /// true if all heartbeats we're received in the last timeframe, otherwise false
-    rclcpp::TimerBase::SharedPtr heartbeat_timer;
-    rclcpp::Subscription<interfaces::msg::Heartbeat>::SharedPtr heartbeat_subscription;
+  // Heartbeat
+  bool heartbeat_received_all = false;   /// true if all heartbeats we're received in the last timeframe, otherwise false
+  rclcpp::TimerBase::SharedPtr heartbeat_timer;
+  rclcpp::Subscription<interfaces::msg::Heartbeat>::SharedPtr heartbeat_subscription;
 
 public:
-    MissionControl();
+  MissionControl();
 
 private:
-    // Event Loop
-    void event_loop();
+  // Event Loop
+  void event_loop();
 
-    // Configuration Changes
-    void set_standby_config();
-    void set_mission_state(const MissionState_t new_mission_state);
-    constexpr MissionState_t get_mission_state() const
-    {
-        return mission_state;
-    }
-    bool get_state_first_loop();
+  // Configuration Changes
+  void set_standby_config();
+  void set_mission_state(const MissionState_t new_mission_state);
+  constexpr MissionState_t get_mission_state() const
+  {
+    return mission_state;
+  }
+  bool get_state_first_loop();
 
-    // Selfcheck
-    void mode_self_check();
+  // Selfcheck
+  void mode_self_check();
 
-    // Mission start
-    void mission_start(const interfaces::msg::MissionStart &msg);
+  // Mission start
+  void mission_start(const interfaces::msg::MissionStart & msg);
 
-    // Takeoff
-    void initiate_takeoff();
+  // Takeoff
+  void initiate_takeoff();
 
-    // Mission Abort
-    void mission_abort(std::string reason);
+  // Mission Abort
+  void mission_abort(std::string reason);
 
-    // Fail-Safe checks
-    void check_control(const interfaces::msg::FlyToCoord &msg);
+  // Fail-Safe checks
+  void check_control(const interfaces::msg::FlyToCoord & msg);
 
-    // Heartbeat
-    void heartbeat_callback(const interfaces::msg::Heartbeat &msg);
-    void heartbeat_timer_callback();
+  // Heartbeat
+  void heartbeat_callback(const interfaces::msg::Heartbeat & msg);
+  void heartbeat_timer_callback();
 };
