@@ -307,6 +307,15 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg)
         return;
     }
     heartbeat.tick = msg.tick;
+
+    // Check timestamp
+    rclcpp::Time timestamp_now = this->now();
+    if (timestamp_now - rclcpp::Time(msg.time_stamp) > rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(10)))
+    {
+        RCLCPP_ERROR(get_logger(), "MissionControl::heartbeat_callback: Received too old timestamp: %s", msg.sender_id.c_str());
+        mission_abort("A too old timestamp was received in a heartbeat message");
+    }
+
     heartbeat.received = true;
 
     RCLCPP_DEBUG(this->get_logger(), "Received heartbeat from: '%s', tick: %u, active: %d", msg.sender_id.c_str(), msg.tick, msg.active);
