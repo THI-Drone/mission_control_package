@@ -6,6 +6,8 @@
   <description>Package for the Mission Control node</description>
   <maintainer email="phg6386@thi.de">philipp</maintainer>
   <license>MIT</license>
+  <url>https://github.com/THI-Drone/mission_control_package</url>
+  <author email="pgh6386@thi.de">philipp</author>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
   <depend>rclcpp</depend>
