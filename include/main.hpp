@@ -33,7 +33,7 @@ typedef enum MissionState
     land,
 } MissionState_t;
 
-class MissionControl : public CommonNode
+class MissionControl : public common_lib::CommonNode
 {
 private:
     // General
