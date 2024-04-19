@@ -57,8 +57,8 @@ private:
     rclcpp::Subscription<interfaces::msg::FlyToCoord>::SharedPtr control_subscription;
 
     // Heartbeat
-    static constexpr uint16_t heartbeat_period_ms = 500;                          /// Heartbeat period in ms
-    bool heartbeat_received_all = false; /// true if all heartbeats we're received in the last timeframe, otherwise false
+    static constexpr uint16_t heartbeat_period_ms = 500; /// Heartbeat period in ms
+    bool heartbeat_received_all = false;                 /// true if all heartbeats we're received in the last timeframe, otherwise false
     rclcpp::TimerBase::SharedPtr heartbeat_timer;
     rclcpp::Subscription<interfaces::msg::Heartbeat>::SharedPtr heartbeat_subscription;
 
