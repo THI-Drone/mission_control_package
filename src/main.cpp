@@ -5,7 +5,7 @@ using std::placeholders::_1;
 MissionControl::MissionControl() : CommonNode("mission_control")
 {
     // Register nodes
-    const std::string node_names[] = {"/node_1", "/node_2"};
+    const std::string node_names[] = {"/node_1", "/node_2", "/waypoint_node"};
 
     for (const std::string &name : node_names)
     {
@@ -27,6 +27,8 @@ MissionControl::MissionControl() : CommonNode("mission_control")
 
     // Mission Abort
     mission_abort_publisher = this->create_publisher<interfaces::msg::MissionAbort>("mission_abort", 10);
+
+    // TODO subscribe to job_finished topic, deactivate node in internal state after received
 
     // Fail-Safe checks
     control_subscription = this->create_subscription<interfaces::msg::FlyToCoord>(
@@ -233,7 +235,7 @@ void MissionControl::mission_abort(std::string reason)
     RCLCPP_FATAL(this->get_logger(), "MissionControl::mission_abort: Aborting mission, reason: %s", reason.c_str());
 
     // Publish abort message
-    auto msg = interfaces::msg::MissionAbort();
+    interfaces::msg::MissionAbort msg;
     msg.sender_id = get_fully_qualified_name();
     msg.reason = reason;
     mission_abort_publisher->publish(msg);

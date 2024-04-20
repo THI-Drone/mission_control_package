@@ -5,6 +5,7 @@
 #include <memory>
 #include <map>
 #include <stddef.h>
+#include <nlohmann/json.hpp>
 #include "rclcpp/rclcpp.hpp"
 
 #include "common_package/common_node.hpp"
@@ -17,6 +18,7 @@
 #include "interfaces/msg/mission_start.hpp"
 #include "interfaces/msg/mission_abort.hpp"
 #include "interfaces/msg/fly_to_coord.hpp"
+#include "interfaces/msg/job_finished.hpp"
 
 /**
  * @brief Enumeration representing the different states of a mission.
