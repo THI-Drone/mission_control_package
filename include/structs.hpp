@@ -21,6 +21,11 @@ struct heartbeat_payload
     }
 };
 
+/**
+ * @brief A struct representing a mission control payload.
+ *
+ * This struct contains a heartbeat payload and a flag indicating whether the node is allowed to start the mission.
+ */
 struct ros_node
 {
     struct heartbeat_payload hb_payload;

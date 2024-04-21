@@ -219,6 +219,7 @@ void MissionControl::initiate_takeoff()
 
     // If takeoff finished
     RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Takeoff finished");
+    // TODO save initial coordinates into command(s)
     set_mission_state(waypoint);
     RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Waypoint state activated");
 }
@@ -273,6 +274,7 @@ void MissionControl::check_control(const interfaces::msg::FlyToCoord &msg)
  * - Checks if the sender of the heartbeat message is registered in the node map. If not, it logs an error and returns.
  * - Checks if the active state of the sender matches the internal state. If not, it logs a fatal error and aborts the mission.
  * - Checks the tick value of the heartbeat message. If it is invalid or has already been received, it logs an error and returns.
+ * - Checks that the received timestamp is not older than 10ms. If it is too old, it logs an error and aborts the mission.
  * - Updates the tick value and sets the received flag in the heartbeat payload of the sender.
  * - Logs the received heartbeat information (sender ID, tick value, and active state) in debug mode.
  *

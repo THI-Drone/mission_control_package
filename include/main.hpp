@@ -5,12 +5,14 @@
 #include <memory>
 #include <map>
 #include <stddef.h>
+#include <vector>
 #include <nlohmann/json.hpp>
 #include "rclcpp/rclcpp.hpp"
 
 #include "common_package/common_node.hpp"
 #include "event_loop_guard.hpp"
 #include "structs.hpp"
+#include "command.hpp"
 
 // Message includes
 #include "interfaces/msg/heartbeat.hpp"
@@ -40,9 +42,11 @@ class MissionControl : public common_lib::CommonNode
 private:
     // General
     MissionState_t mission_state = selfcheck; /// Main mission state
-    bool state_first_loop = true;             /// If set to true, the first event loop after a mission_state change is happening. Manually set to false in your function after first call.
+    bool state_first_loop = true;             /// If set to true, the first event loop after a mission_state change is happening. Will be set to false when calling get_state_first_loop().
     std::map<std::string, ros_node> node_map; /// Has an entry for every ros node
     std::string active_node = "";             /// node_id that is currently allowed to send data to the FCC interface, set to "" if none is allowed
+    std::vector<std::unique_ptr<Command::BaseCommand>> commands;            /// Storage for current commands that will be executed one by one
+    std::vector<std::unique_ptr<Command::BaseCommand>> predefined_commands; /// Vector for predefined commands read from a global JSON file
 
     // Event Loop
     const uint32_t event_loop_time_delta_ms = 100;

@@ -18,7 +18,7 @@ find_package(common_package REQUIRED)
 
 include_directories(include)
 
-add_executable(mission_control_node src/main.cpp)
+add_executable(mission_control_node src/main.cpp src/command.cpp)
 ament_target_dependencies(mission_control_node rclcpp interfaces common_package nlohmann_json)
 
 install(TARGETS
