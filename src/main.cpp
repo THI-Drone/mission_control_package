@@ -29,6 +29,7 @@ MissionControl::MissionControl() : CommonNode("mission_control")
     mission_abort_publisher = this->create_publisher<interfaces::msg::MissionAbort>("mission_abort", 10);
 
     // TODO subscribe to job_finished topic, deactivate node in internal state after received
+    // TODO when getting a job_finished topic, save content in custom struct and have the current function poll for it
 
     // Fail-Safe checks
     control_subscription = this->create_subscription<interfaces::msg::FlyToCoord>(
