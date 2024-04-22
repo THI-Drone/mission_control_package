@@ -64,7 +64,7 @@ void MissionControl::event_loop()
         initiate_takeoff();
         break;
 
-        // TODO implement other cases
+    // TODO implement other states
 
     default:
         RCLCPP_ERROR(this->get_logger(), "MissionControl::event_loop: Unknown mission_state: %d", get_mission_state());
