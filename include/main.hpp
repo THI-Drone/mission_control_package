@@ -12,7 +12,6 @@
 #include "common_package/common_node.hpp"
 #include "event_loop_guard.hpp"
 #include "structs.hpp"
-#include "command.hpp"
 
 // Message includes
 #include "interfaces/msg/heartbeat.hpp"
@@ -30,7 +29,7 @@ typedef enum MissionState
     selfcheck,
     armed,
     takeoff,
-    waypoint,
+    fly_to_waypoint,
     marker_recognition,
     drop_payload,
     rth,
@@ -41,17 +40,25 @@ class MissionControl : public common_lib::CommonNode
 {
 private:
     // General
-    MissionState_t mission_state = selfcheck; /// Main mission state
-    bool state_first_loop = true;             /// If set to true, the first event loop after a mission_state change is happening. Will be set to false when calling get_state_first_loop().
-    std::map<std::string, ros_node> node_map; /// Has an entry for every ros node
-    std::string active_node = "";             /// node_id that is currently allowed to send data to the FCC interface, set to "" if none is allowed
-    std::vector<std::unique_ptr<Command::BaseCommand>> commands;            /// Storage for current commands that will be executed one by one
-    std::vector<std::unique_ptr<Command::BaseCommand>> predefined_commands; /// Vector for predefined commands read from a global JSON file
+    MissionState_t mission_state = selfcheck;        /// Main mission state
+    bool job_finished_successfully = false;          /// Will be set to true after a successfull job_finished message was received from the active node
+    nlohmann::json job_finished_payload;             /// If a job finished successfully, the payload will be stored here for future usage
+    bool state_first_loop = true;                    /// If set to true, the first event loop after a mission_state change is happening. Will be set to false when calling get_state_first_loop().
+    std::map<std::string, ros_node> node_map;        /// Has an entry for every ros node
+    std::string active_node_id = "";                 /// node_id that is currently allowed to send data to the FCC interface, set to "" if none is allowed
+    std::vector<nlohmann::json> commands;            /// Storage for current commands that will be executed one by one
+    std::vector<nlohmann::json> predefined_commands; /// Vector for predefined commands read from a global JSON file
 
     // Event Loop
     const uint32_t event_loop_time_delta_ms = 100;
     bool event_loop_active = true; /// If set to true, the event loop will be executed periodically
     rclcpp::TimerBase::SharedPtr event_loop_timer;
+
+    // Job finished
+    rclcpp::Subscription<interfaces::msg::JobFinished>::SharedPtr job_finished_subscription;
+
+    // Control
+    rclcpp::Publisher<interfaces::msg::Control>::SharedPtr control_publisher;
 
     // Mission Start
     rclcpp::Subscription<interfaces::msg::MissionStart>::SharedPtr mission_start_subscription;
@@ -83,15 +90,31 @@ private:
         return mission_state;
     }
     bool get_state_first_loop();
+    bool get_job_finished_successfully();
+    nlohmann::json get_job_finished_payload();
+
+    // Active Node
+    void set_active_node_id(std::string node_id);
+    void clear_active_node_id();
+    std::string get_active_node_id() const
+    {
+        return active_node_id;
+    }
 
     // Selfcheck
     void mode_self_check();
+
+    // Job finished
+    void job_finished_callback(const interfaces::msg::JobFinished &msg);
 
     // Mission start
     void mission_start(const interfaces::msg::MissionStart &msg);
 
     // Takeoff
     void initiate_takeoff();
+
+    // Fly to waypoint
+    void mode_fly_to_waypoint();
 
     // Mission Abort
     void mission_abort(std::string reason);

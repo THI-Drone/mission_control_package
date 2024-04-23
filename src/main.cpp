@@ -21,6 +21,10 @@ MissionControl::MissionControl() : CommonNode("mission_control")
     heartbeat_timer = this->create_wall_timer(
         1000ms, std::bind(&MissionControl::heartbeat_timer_callback, this));
 
+    // Init Job_Finished
+    job_finished_subscription = this->create_subscription<interfaces::msg::JobFinished>(
+        "job_finished", 10, std::bind(&MissionControl::job_finished_callback, this, _1));
+
     // Mission Start
     mission_start_subscription = this->create_subscription<interfaces::msg::MissionStart>(
         "mission_start", 10, std::bind(&MissionControl::mission_start, this, _1));
@@ -28,8 +32,8 @@ MissionControl::MissionControl() : CommonNode("mission_control")
     // Mission Abort
     mission_abort_publisher = this->create_publisher<interfaces::msg::MissionAbort>("mission_abort", 10);
 
-    // TODO subscribe to job_finished topic, deactivate node in internal state after received
-    // TODO when getting a job_finished topic, save content in custom struct and have the current function poll for it
+    // Control Publisher
+    control_publisher = this->create_publisher<interfaces::msg::Control>("control", 10);
 
     // Fail-Safe checks
     control_subscription = this->create_subscription<interfaces::msg::FlyToCoord>(
@@ -63,8 +67,11 @@ void MissionControl::event_loop()
     case takeoff:
         initiate_takeoff();
         break;
+    case fly_to_waypoint:
+        mode_fly_to_waypoint();
+        break;
 
-    // TODO implement other states
+        // TODO implement other states
 
     default:
         RCLCPP_ERROR(this->get_logger(), "MissionControl::event_loop: Unknown mission_state: %d", get_mission_state());
@@ -79,25 +86,54 @@ void MissionControl::event_loop()
  */
 void MissionControl::set_standby_config()
 {
-    active_node = "";
+    clear_active_node_id();
 }
 
 /**
  * @brief Sets the mission state to a new value.
  *
  * This function sets the mission state to the specified new value. If the new value is different from the current mission state,
- * the `state_first_loop` flag is set to true. After updating the mission state, a debug message is logged.
+ * the `job_finished_successfully` flag is set to false and the `state_first_loop` flag is set to true.
+ * After updating the mission state, a debug message is logged.
  *
  * @param new_mission_state The new mission state to set.
  */
 void MissionControl::set_mission_state(const MissionState_t new_mission_state)
 {
     if (mission_state != new_mission_state)
+    {
+        job_finished_successfully = false;
         state_first_loop = true;
+    }
 
     mission_state = new_mission_state;
 
     RCLCPP_DEBUG(this->get_logger(), "MissionControl::set_mission_state: Set mission state to %d", mission_state);
+}
+
+/**
+ * @brief Sets the active node ID.
+ *
+ * This function sets the active node ID to the specified value.
+ * Use the `clear_active_node_id` function instead if no node is allowed to send to the FCC interface.
+ *
+ * @param node_id The ID of the node to set as active.
+ */
+void MissionControl::set_active_node_id(std::string node_id)
+{
+    RCLCPP_DEBUG(this->get_logger(), "MissionControl::set_active_node_id: Set active_node_id to %s", node_id.c_str());
+    active_node_id = node_id;
+}
+
+/**
+ * @brief Clears the active node ID.
+ *
+ * This function clears the active node ID by setting it to an empty string.
+ */
+void MissionControl::clear_active_node_id()
+{
+    RCLCPP_DEBUG(this->get_logger(), "MissionControl::clear_active_node_id: Cleared active node id");
+    active_node_id = "";
 }
 
 /**
@@ -117,6 +153,45 @@ bool MissionControl::get_state_first_loop()
     // Set first loop to false and return true
     state_first_loop = false;
     return true;
+}
+
+/**
+ * @brief Checks if the job finished successfully.
+ *
+ * This function checks if the job finished successfully and returns the result.
+ * If the job has finished successfully, the flag is reset to false.
+ *
+ * @return true if the job finished successfully, false otherwise.
+ */
+bool MissionControl::get_job_finished_successfully()
+{
+    if (job_finished_successfully)
+    {
+        job_finished_successfully = false;
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
+/**
+ * @brief Retrieves the payload for a finished job.
+ *
+ * This function returns the payload for a finished job and clears the internal
+ * `job_finished_payload` variable.
+ *
+ * @return The payload for the finished job.
+ */
+nlohmann::json MissionControl::get_job_finished_payload()
+{
+    nlohmann::json res = job_finished_payload;
+
+    // Clear the job_finished_payload
+    job_finished_payload = nlohmann::json();
+
+    return res;
 }
 
 /**
@@ -161,6 +236,57 @@ void MissionControl::mode_self_check()
     }
 }
 
+void MissionControl::job_finished_callback(const interfaces::msg::JobFinished &msg)
+{
+    // Try to parse JSON
+    nlohmann::json payload;
+    try
+    {
+        payload = nlohmann::json::parse(msg.payload);
+    }
+    catch (const nlohmann::json::exception &e)
+    {
+        RCLCPP_ERROR(this->get_logger(), "MissionControl::job_finished_callback: Failed to parse json in payload");
+    }
+
+    // Check error code
+    if (msg.error_code != EXIT_SUCCESS)
+    {
+        // Abort mission
+        std::string error_msg = "MissionControl::job_finished_callback: Received job_finished message with error_code: " + msg.error_code;
+
+        if (payload.contains("error_msg"))
+            error_msg += ". Error Message: " + payload.at("error_msg").dump();
+
+        mission_abort(error_msg);
+        return;
+    }
+
+    // Ignore message if sender node is not active as this might be a delayed message or a programming error in the sender node
+    if (msg.sender_id != get_active_node_id())
+    {
+        RCLCPP_WARN(this->get_logger(), "MissionControl::job_finished_callback: Got a successfull job_finished message from an inactive node: %s", msg.sender_id.c_str());
+        return;
+    }
+
+    // Send control message to explicitly deactivate node
+    interfaces::msg::Control control_msg;
+    control_msg.target_id = msg.sender_id;
+    control_msg.active = false;
+    control_msg.payload = "{}";
+    control_publisher->publish(control_msg);
+
+    // Deactivate node in internal state
+    clear_active_node_id();
+
+    // Store payload for future use
+    job_finished_payload = msg.payload;
+
+    // Set job_finished_successfully flag to true indicating receiving a successfull job_finished message
+    RCLCPP_INFO(this->get_logger(), "MissionControl::job_finished_callback: Job finished successfully: node_id %s", msg.sender_id.c_str());
+    job_finished_successfully = true;
+}
+
 /**
  * @brief Starts the mission based on the received command.
  *
@@ -202,8 +328,6 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg)
 
 void MissionControl::initiate_takeoff()
 {
-    // TODO CONTINUE HERE
-
     if (get_state_first_loop())
     {
         RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Takeoff initated");
@@ -219,9 +343,19 @@ void MissionControl::initiate_takeoff()
 
     // If takeoff finished
     RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Takeoff finished");
-    // TODO save initial coordinates into command(s)
-    set_mission_state(waypoint);
-    RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: Waypoint state activated");
+    // TODO save initial coordinates
+    // TODO check for inital command instead of switching to fly_to_waypoint directly
+    set_mission_state(fly_to_waypoint);
+    RCLCPP_INFO(this->get_logger(), "MissionControl::initiate_takeoff: fly_to_waypoint state activated");
+}
+
+void MissionControl::mode_fly_to_waypoint()
+{
+    if (get_state_first_loop())
+    {
+        // Activate WaypointNode
+        // TODO continue here after reading in the Mission Definition File to know where to fly
+    }
 }
 
 /**
@@ -235,6 +369,11 @@ void MissionControl::initiate_takeoff()
 void MissionControl::mission_abort(std::string reason)
 {
     RCLCPP_FATAL(this->get_logger(), "MissionControl::mission_abort: Aborting mission, reason: %s", reason.c_str());
+    RCLCPP_FATAL(this->get_logger(), "MissionControl::mission_abort: Last active node: %s", get_active_node_id().c_str());
+    RCLCPP_FATAL(this->get_logger(), "MissionControl::mission_abort: Internal state: %d", get_mission_state());
+
+    // Reset internal state
+    clear_active_node_id();
 
     // Publish abort message
     interfaces::msg::MissionAbort msg;
@@ -259,7 +398,7 @@ void MissionControl::check_control(const interfaces::msg::FlyToCoord &msg)
 {
     RCLCPP_DEBUG(this->get_logger(), "MissionControl::check_control: Checking FlyToCoord message from %s", msg.sender_id.c_str());
 
-    if (msg.sender_id != active_node)
+    if (msg.sender_id != get_active_node_id())
         mission_abort("Unauthorized node sending on fly_to_coord topic registered");
 
     RCLCPP_DEBUG(this->get_logger(), "MissionControl::check_control: Checking FlyToCoord message successfull");
@@ -293,12 +432,12 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg)
     }
 
     // Check that active state matches the internal state
-    if (msg.active && (msg.sender_id != active_node))
+    if (msg.active && (msg.sender_id != get_active_node_id()))
     {
         RCLCPP_FATAL(get_logger(), "MissionControl::heartbeat_callback: Node '%s' is active even though it should be deactive", msg.sender_id.c_str());
         mission_abort("A node was active even though it should be deactive");
     }
-    if ((!msg.active) && (msg.sender_id == active_node))
+    if ((!msg.active) && (msg.sender_id == get_active_node_id()))
     {
         RCLCPP_FATAL(get_logger(), "MissionControl::heartbeat_callback: Node '%s' is deactive even though it should be active", msg.sender_id.c_str());
         mission_abort("A node was deactive even though it should be active");
