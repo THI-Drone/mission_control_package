@@ -237,7 +237,7 @@ void MissionControl::mode_self_check()
         std::string file_path = "src/mission_control_package/assets/mission_test.json";
         try
         {
-            mission_definition_reader.read_file(file_path);
+            mission_definition_reader.read_file(file_path, false);
         }
         catch (const std::runtime_error &e)
         {
