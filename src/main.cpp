@@ -403,8 +403,6 @@ void MissionControl::check_control(const interfaces::msg::FlyToCoord &msg)
     if (msg.sender_id != get_active_node_id())
         mission_abort("Unauthorized node sending on fly_to_coord topic registered");
 
-    // TODO check if contents in message are inside of the restrictions or trigger mission abort
-
     RCLCPP_DEBUG(this->get_logger(), "MissionControl::check_control: Checking FlyToCoord message successfull");
 }
 
