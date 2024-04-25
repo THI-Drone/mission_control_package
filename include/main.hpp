@@ -12,6 +12,7 @@
 #include "common_package/common_node.hpp"
 #include "event_loop_guard.hpp"
 #include "structs.hpp"
+#include "mission_definition_file.hpp"
 
 // Message includes
 #include "interfaces/msg/control.hpp"
@@ -60,6 +61,9 @@ private:
     std::vector<nlohmann::json>
         predefined_commands; /// Vector for predefined commands read from a global
                              /// JSON file
+    
+    // Mission Definition File
+    MissionDefinitionReader mission_definition_reader;
 
     // Event Loop
     const uint32_t event_loop_time_delta_ms = 100;

@@ -5,15 +5,15 @@ using std::placeholders::_1;
 MissionControl::MissionControl() : CommonNode("mission_control")
 {
     // Register nodes
-    const std::string node_names[] = {"/node_1", "/node_2", "/waypoint_node"};
+    const std::string node_names[] = {"/telemetry_node", "/waypoint_node"};
 
     for (const std::string &name : node_names)
     {
         node_map[name] = ros_node();
     }
 
-    // Allowing node_1 to start the mission
-    node_map["/node_1"].can_start_mission = true; // TODO change with real node_id
+    // Allowing waypoint_node to start the mission
+    node_map["/waypoint_node"].can_start_mission = true; // TODO change with real node_id
 
     // Initialize Heartbeat
     heartbeat_subscription =
@@ -233,7 +233,18 @@ void MissionControl::mode_self_check()
 
         // TODO implement waiting for good GPS signal
 
-        // TODO implement check if position is inside of geofence
+        // TODO implement reading of Mission Definition File
+        std::string file_path = "src/mission_control_package/assets/mission_test.json";
+        try
+        {
+            mission_definition_reader.read_file(file_path);
+        }
+        catch (const std::runtime_error &e)
+        {
+            mission_abort("MissionControl::mode_self_check: Failed to read mission file: " + (std::string) e.what());
+        }
+
+        // TODO implement check if position is inside of geofence -> but only after gps was found -> add second selfcheck stage
     }
 
     const uint32_t max_wait_time = (30 * 1000) / event_loop_time_delta_ms;

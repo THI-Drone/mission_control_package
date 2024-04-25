@@ -1,0 +1,73 @@
+{
+   "safety": {
+      "geofence": [
+         {
+            "point_1": {
+               "lat": 1.23434,
+               "lon": 1.456423
+            }
+         },
+         {
+            "point_2": {
+               "lat": 1.23434,
+               "lon": 2.456423
+            }
+         },
+         {
+            "point_3": {
+               "lat": 2.23434,
+               "lon": 1.456423
+            }
+         },
+         {
+            "point_4": {
+               "lat": 2.23434,
+               "lon": 2.456423
+            }
+         }
+      ],
+      "max_height_cm": 5000,
+      "min_cruise_height_cm": 500,
+      "max_horizontal_speed_mps": 10.0,
+      "max_vertical_speed_mps": 2.5
+   },
+   "markers": {
+      "init": [
+         {
+            "type": "waypoint",
+            "data": {
+               "target_coordinate_lat": 48.767099,
+               "target_coordinate_lon": 11.434351,
+               "pre_wait_time_ms": 0,
+               "post_wait_time_ms": 0,
+               "cruise_height_cm": 2000,
+               "target_height_cm": 500,
+               "horizontal_speed_mps": 3.0,
+               "vertical_speed_mps": 1.0
+            }
+         }
+      ],
+      "1": [
+         {
+            "type": "detect_marker",
+            "data": {
+               "detection_height_m": 5.0,
+               "timeout_ms": 30000
+            }
+         }
+      ],
+      "2": [
+         {
+            "type": "drop_payload",
+            "data": {
+               "drop_height_m": 3.0,
+               "drop_duration_ms": 5000
+            }
+         },
+         {
+            "type": "end_mission",
+            "data": {}
+         }
+      ]
+   }
+}
