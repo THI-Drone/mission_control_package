@@ -17,7 +17,7 @@
 void MissionDefinitionReader::read_file(const std::string &file_path, const bool dry_run)
 {
     std::ifstream file;
-    file.open(file_path, std::ios::out);
+    file.open(file_path, std::ios::in);
 
     if (!file.good() || !file.is_open())
         throw std::runtime_error(
