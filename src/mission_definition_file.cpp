@@ -63,7 +63,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
     }
 
     /*
-     *Check second level of json
+     * Check second level of json
      */
     // Check "safety" value
     nlohmann::ordered_json safety_json = json.at("safety");
@@ -126,7 +126,11 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
         // Checking that at least 2 geofence points are provided
         if (geofence_points.size() < 2)
             throw std::runtime_error("MissionDefinitionReader::read_file: At least 2 points most be provided (currently: " + std::to_string(geofence_points.size()) + ")");
-        
+
+        // Store geofence points if not a dry run
+        if (!dry_run)
+            safety_settings.geofence_points = geofence_points;
+
         printf("MissionDefinitionReader::read_file: Geofence points checked successfully.\n");
     }
     catch (const std::runtime_error &e)
@@ -224,5 +228,36 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
     if (dry_run) // Dry run ends here
         return;
 
-    // TODO continue here: store result in internal data structure for future use
+    /*
+     * Store safety settings
+     */
+    // Check that safety settings were defined and if yes store them, otherwise use default values
+    // Note: Geofence points were already stored earlier
+    if (safety_json.contains("max_height_cm"))
+        safety_settings.max_height_cm = safety_json.at("max_height_cm");
+    if (safety_json.contains("min_cruise_height_cm"))
+        safety_settings.min_cruise_height_cm = safety_json.at("min_cruise_height_cm");
+    if (safety_json.contains("max_horizontal_speed_mps"))
+        safety_settings.max_horizontal_speed_mps = safety_json.at("max_horizontal_speed_mps");
+    if (safety_json.contains("max_vertical_speed_mps"))
+        safety_settings.max_vertical_speed_mps = safety_json.at("max_vertical_speed_mps");
+
+    // Store marker details
+    for (const auto &[marker_name, marker_content] : markers_json.items())
+    {
+        // Loop through every marker
+
+        std::vector<command> marker_commands;
+
+        for (const auto &[key, val] : marker_content.items())
+        {
+            // Loop through every command in the marker
+            command com;
+            com.type = val.at("type");
+            com.data = val.at("data");
+            marker_commands.push_back(com);
+        }
+
+        markers[marker_name] = marker_commands;
+    }
 }
