@@ -27,7 +27,9 @@
  */
 typedef enum MissionState
 {
+    prepare_mission,
     selfcheck,
+    check_drone_configuration,
     armed,
     takeoff,
     fly_to_waypoint,
@@ -41,7 +43,7 @@ class MissionControl : public common_lib::CommonNode
 {
 private:
     // General
-    MissionState_t mission_state = selfcheck; /// Main mission state
+    MissionState_t mission_state = prepare_mission; /// Main mission state
     bool job_finished_successfully =
         false; /// Will be set to true after a successfull job_finished message
                /// was received from the active node
@@ -120,8 +122,14 @@ private:
     void clear_active_node_id();
     std::string get_active_node_id() const { return active_node_id; }
 
+    // Prepare Mission
+    void mode_prepare_mission();
+
     // Selfcheck
     void mode_self_check();
+
+    // Check drone configuration
+    void mode_check_drone_configuration();
 
     // Job finished
     void job_finished_callback(const interfaces::msg::JobFinished &msg);

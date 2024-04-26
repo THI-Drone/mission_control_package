@@ -43,7 +43,7 @@
          {
             "type": "detect_marker",
             "data": {
-               "detection_height_m": 5.0,
+               "detection_height_cm": 500,
                "timeout_ms": 30000
             }
          }
@@ -52,7 +52,7 @@
          {
             "type": "drop_payload",
             "data": {
-               "drop_height_m": 3.0,
+               "drop_height_cm": 300,
                "drop_duration_ms": 5000
             }
          },

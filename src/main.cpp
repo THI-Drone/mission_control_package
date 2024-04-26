@@ -69,8 +69,14 @@ void MissionControl::event_loop()
 
     switch (get_mission_state())
     {
+    case prepare_mission:
+        mode_prepare_mission();
+        break;
     case selfcheck:
         mode_self_check();
+        break;
+    case check_drone_configuration:
+        mode_check_drone_configuration();
         break;
     case armed:
         set_standby_config();
@@ -214,6 +220,32 @@ nlohmann::json MissionControl::get_job_finished_payload()
 }
 
 /**
+ * @brief Prepares the mission by reading the mission file and setting the standby configuration.
+ */
+void MissionControl::mode_prepare_mission()
+{
+    if (get_state_first_loop())
+    {
+        RCLCPP_INFO(this->get_logger(), "MissionControl::mode_prepare_mission: Prepare mission started");
+        set_standby_config();
+
+        std::string file_path = "src/mission_control_package/assets/mission_test.json";
+        try
+        {
+            mission_definition_reader.read_file(file_path, false);
+        }
+        catch (const std::runtime_error &e)
+        {
+            mission_abort("MissionControl::mode_prepare_mission: Failed to read mission file: " + (std::string)e.what());
+        }
+
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::mode_prepare_mission: Prepare mission finished");
+        set_mission_state(selfcheck);
+    }
+}
+
+/**
  * @brief Executes the self-check of the mission control.
  *
  * This function performs a self-check by waiting for a good GPS signal and
@@ -232,19 +264,6 @@ void MissionControl::mode_self_check()
         i = 0;
 
         // TODO implement waiting for good GPS signal
-
-        // TODO implement reading of Mission Definition File
-        std::string file_path = "src/mission_control_package/assets/mission_test.json";
-        try
-        {
-            mission_definition_reader.read_file(file_path, false);
-        }
-        catch (const std::runtime_error &e)
-        {
-            mission_abort("MissionControl::mode_self_check: Failed to read mission file: " + (std::string) e.what());
-        }
-
-        // TODO implement check if position is inside of geofence -> but only after gps was found -> add second selfcheck stage
     }
 
     const uint32_t max_wait_time = (30 * 1000) / event_loop_time_delta_ms;
@@ -273,12 +292,52 @@ void MissionControl::mode_self_check()
     {
         RCLCPP_INFO(this->get_logger(),
                     "MissionControl::mode_self_check: Self check finished");
-        set_mission_state(armed);
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::mode_self_check: Mission Control armed");
+        set_mission_state(check_drone_configuration);
     }
 }
 
+/**
+ * @brief Checks the drone configuration and sets the mission state to armed.
+ *
+ * This function checks if the drone configuration is valid by performing the following checks:
+ * 1. Check if position is inside of geofence.
+ * 2. Check that drone is on the ground.
+ *
+ * @note After performing the checks, the mission state is set to armed.
+ */
+void MissionControl::mode_check_drone_configuration()
+{
+    if (get_state_first_loop())
+    {
+        RCLCPP_INFO(this->get_logger(), "MissionControl::mode_check_drone_configuration: Check drone configuration started");
+        set_standby_config();
+
+        // TODO implement check if position is inside of geofence
+
+        // TODO implement check that drone is on the ground
+    }
+
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::mode_check_drone_configuration: Check drone configuration finished");
+    set_mission_state(armed);
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::mode_check_drone_configuration: Mission Control armed");
+}
+
+/**
+ * @brief Callback function for handling job_finished messages.
+ *
+ * This function is called when a job_finished message is received. It performs the following tasks:
+ * 1. Parses the JSON payload from the message.
+ * 2. Checks the error code of the message. If it is not EXIT_SUCCESS, aborts the mission.
+ * 3. Ignores the message if the sender node is not active.
+ * 4. Sends a control message to explicitly deactivate the sender node.
+ * 5. Updates the internal state by clearing the active node ID.
+ * 6. Stores the payload for future use.
+ * 7. Sets the job_finished_successfully flag to true.
+ *
+ * @param msg The job_finished message received.
+ */
 void MissionControl::job_finished_callback(
     const interfaces::msg::JobFinished &msg)
 {
@@ -618,9 +677,9 @@ void MissionControl::heartbeat_timer_callback()
     }
     else
     {
-        if (get_mission_state() != selfcheck)
+        if (get_mission_state() != selfcheck && get_mission_state() != prepare_mission)
         {
-            mission_abort("Missing heartbeat while not in 'selfcheck' state");
+            mission_abort("Missing heartbeat while not in 'selfcheck' or 'prepare_mission' state");
         }
     }
 }

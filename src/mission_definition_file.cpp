@@ -186,7 +186,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
                     const std::string marker_type = val.at("type");
                     const nlohmann::ordered_json json_marker_data = val.at("data");
 
-                    printf("MissionDefinitionReader::read_file: Checking that 'data' is formatted correctly for the marker '%s' of type '%s'.\n", marker_name.c_str(), marker_type.c_str());
+                    printf("MissionDefinitionReader::read_file: Checking that 'data' is formatted correctly for the command of type '%s'.\n", marker_type.c_str());
 
                     const std::map<const std::string, const common_lib::JsonKeyDefinition>
                         definition = common_lib::CommandDefinitions::get_definition(marker_type);
