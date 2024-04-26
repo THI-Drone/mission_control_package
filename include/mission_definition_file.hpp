@@ -4,6 +4,8 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
+#include <vector>
 #include <nlohmann/json.hpp>
 #include <rclcpp/node_options.hpp>
 
