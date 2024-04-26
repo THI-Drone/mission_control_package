@@ -7,10 +7,10 @@
 #include <unordered_set>
 #include <vector>
 #include <nlohmann/json.hpp>
-#include <rclcpp/node_options.hpp>
 
 #include "common_package/commands.hpp"
 
+namespace mission_file_lib{
 class MissionDefinitionReader
 {
 public:
@@ -32,3 +32,4 @@ public:
      */
     void read_file(const std::string &file_path, const bool dry_run);
 };
+}

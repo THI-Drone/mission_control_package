@@ -63,7 +63,7 @@ private:
                              /// JSON file
     
     // Mission Definition File
-    MissionDefinitionReader mission_definition_reader;
+    mission_file_lib::MissionDefinitionReader mission_definition_reader;
 
     // Event Loop
     const uint32_t event_loop_time_delta_ms = 100;

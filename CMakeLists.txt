@@ -19,6 +19,25 @@ find_package(common_package REQUIRED)
 
 include_directories(include)
 
+#  Mission File Lib
+add_library(mission_file_lib SHARED
+  src/mission_definition_file.cpp)
+ament_export_libraries(mission_file_lib)
+ament_export_include_directories(include)
+ament_target_dependencies(mission_file_lib common_package nlohmann_json)
+
+install (
+  DIRECTORY include/
+  DESTINATION include
+)
+
+install (TARGETS mission_file_lib
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
+)
+
+# Mission Control Node
 add_executable(mission_control_node
                 src/mission_definition_file.cpp
                 src/main.cpp)

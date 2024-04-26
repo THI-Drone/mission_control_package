@@ -1,5 +1,7 @@
 #include "mission_definition_file.hpp"
 
+using namespace mission_file_lib;
+
 /**
  * @brief Reads a mission definition file and performs validation checks.
  *
@@ -90,7 +92,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
             throw std::runtime_error("MissionDefinitionReader::read_file: 'min_cruise_height_cm' can not be higher than 'max_height_cm'");
 
         // Check geofence
-        printf("MissionDefinitionReader::read_file: Checking geofence points.\n");
+        printf("MissionDefinitionReader::read_file: Checking geofence points:\n");
 
         nlohmann::ordered_json geofence_json = safety_json.at("geofence");
 
@@ -140,7 +142,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
 
     try
     {
-        printf("MissionDefinitionReader::read_file: Checking marker values.\n");
+        printf("MissionDefinitionReader::read_file: Checking marker values:\n");
 
         // Loop through all markers
         std::unordered_set<std::string> marker_names;
