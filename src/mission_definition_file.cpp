@@ -166,6 +166,10 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
             if (!marker_content.is_array())
                 throw std::runtime_error("MissionDefinitionReader::read_file: Marker value of key '" + marker_name + "' is not of type array");
 
+            // Check that at least one command is specified
+            if(marker_content.size() <= 0)
+                throw std::runtime_error("MissionDefinitionReader::read_file: Marker value of key '" + marker_name + "' must have at least one command");
+
             for (const auto &[key, val] : marker_content.items())
             {
                 // Loop through every command in the marker
@@ -211,7 +215,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
             else
                 first_loop = false;
 
-            printf("%s", marker_name.c_str());
+            printf("'%s'", marker_name.c_str());
         }
         printf("\n");
     }
@@ -260,4 +264,22 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
 
         markers[marker_name] = marker_commands;
     }
+}
+
+/**
+ * @brief Retrieves the marker commands associated with a given marker name.
+ * 
+ * This function returns a vector of commands associated with the specified marker name.
+ * If the marker name is not found in the markers map, a runtime_error is thrown.
+ * 
+ * @param marker_name The name of the marker.
+ * @return std::vector<command> The vector of commands associated with the marker name.
+ * @throws std::runtime_error if the marker name is not found.
+ */
+std::vector<command> MissionDefinitionReader::get_marker_commands(const std::string& marker_name) const
+{
+    if(markers.find(marker_name) == markers.end())
+        throw std::runtime_error("MissionDefinitionReader::get_marker_commands: Marker name not found");
+
+    return markers.at(marker_name);
 }

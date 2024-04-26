@@ -79,10 +79,14 @@ void MissionControl::event_loop()
         mode_check_drone_configuration();
         break;
     case armed:
-        set_standby_config();
+        if (get_state_first_loop())
+            set_standby_config();
         break;
     case takeoff:
         initiate_takeoff();
+        break;
+    case decision_maker:
+        mode_decision_maker();
         break;
     case fly_to_waypoint:
         mode_fly_to_waypoint();
@@ -146,6 +150,22 @@ void MissionControl::set_active_node_id(std::string node_id)
                  "MissionControl::set_active_node_id: Set active_node_id to %s",
                  node_id.c_str());
     active_node_id = node_id;
+}
+
+/**
+ * @brief Sets the active marker name.
+ *
+ * This function sets the active marker name to the provided value.
+ *
+ * @param new_active_marker_name The new active marker name.
+ */
+void MissionControl::set_active_marker_name(const std::string &new_active_marker_name)
+{
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::set_active_marker_name: Set active_marker_name to %s",
+                 new_active_marker_name.c_str());
+
+    active_marker_name = new_active_marker_name;
 }
 
 /**
@@ -380,11 +400,7 @@ void MissionControl::job_finished_callback(
     }
 
     // Send control message to explicitly deactivate node
-    interfaces::msg::Control control_msg;
-    control_msg.target_id = msg.sender_id;
-    control_msg.active = false;
-    control_msg.payload = "{}";
-    control_publisher->publish(control_msg);
+    send_control(msg.sender_id, false, "{}");
 
     // Deactivate node in internal state
     clear_active_node_id();
@@ -445,6 +461,9 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg)
         return;
     }
 
+    // Set mission to 'init' marker
+    set_active_marker_name("init");
+
     // Start mission
     RCLCPP_INFO(this->get_logger(),
                 "MissionControl::mission_start: Mission started");
@@ -472,23 +491,163 @@ void MissionControl::initiate_takeoff()
     // If takeoff finished
     RCLCPP_INFO(this->get_logger(),
                 "MissionControl::initiate_takeoff: Takeoff finished");
-    // TODO save initial coordinates
-    // TODO check for inital command instead of switching to fly_to_waypoint
-    // directly
-    set_mission_state(fly_to_waypoint);
+
+    set_mission_state(decision_maker);
     RCLCPP_INFO(
         this->get_logger(),
-        "MissionControl::initiate_takeoff: fly_to_waypoint state activated");
+        "MissionControl::initiate_takeoff: make_decision state activated");
 }
 
+/**
+ * @brief Makes decisions on the mode of operation for the mission control.
+ *
+ * This function is responsible for making decisions on the mode of operation for the mission control.
+ * It checks if there are commands left to be executed and moves to the next command if necessary.
+ * If there are no more commands, it moves to the next marker and retrieves new commands from the marker.
+ * It also checks the type of the current command and sets the mission state accordingly.
+ *
+ * @note This function assumes that the `commands` vector and `current_command_id` variable have been properly initialized and that the active_marker_name is updated beforehand if a new marker was detected.
+ */
+void MissionControl::mode_decision_maker()
+{
+    EventLoopGuard elg(&event_loop_active, false);
+
+    RCLCPP_INFO(this->get_logger(), "MissionControl::mode_decision_maker: Decision Maker started");
+
+    RCLCPP_INFO(this->get_logger(), "MissionControl::mode_decision_maker: active_marker_name: '%s', current_command_id: %ld, command count: %ld", get_active_marker_name().c_str(), current_command_id, commands.size());
+
+    // Check if there are commands left that need to be executed
+    if (commands.size() > 0 && current_command_id < commands.size() - 1)
+    {
+        current_command_id++; // move command id one further
+        RCLCPP_DEBUG(this->get_logger(), "MissionControl::mode_decision_maker: Moved command id to: %ld", current_command_id);
+    }
+    else // Move to next marker
+    {
+        // Store new commands from active marker in storage
+        current_command_id = 0;
+
+        // Check that marker has not been executed before
+        std::string active_marker = get_active_marker_name();
+        RCLCPP_DEBUG(this->get_logger(), "MissionControl::mode_decision_maker: Getting new commands for active marker name: '%s'", active_marker.c_str());
+
+        if (executed_marker_names.find(active_marker) != executed_marker_names.end())
+            mission_abort("MissionControl::mode_decision_maker: Got the same active marker two times: " + active_marker);
+
+        executed_marker_names.insert(active_marker);
+
+        try
+        {
+            // Get new marker commands and store them in cache
+            commands = mission_definition_reader.get_marker_commands(active_marker);
+        }
+        catch (const std::runtime_error &e)
+        {
+            mission_abort("MissionControl::mode_decision_maker: Failed to get new commands: " + (std::string)e.what());
+        }
+    }
+
+    // Check if command list is empty
+    if (commands.size() <= 0)
+        mission_abort("MissionControl::mode_decision_maker: Comand list is empty");
+
+    // Switch mode based on the current command
+    std::string &current_command_type = commands.at(current_command_id).type;
+    RCLCPP_DEBUG(this->get_logger(), "MissionControl::mode_decision_maker: Switching mode based on command type: '%s'", current_command_type.c_str());
+
+    if (current_command_type == "waypoint")
+        set_mission_state(fly_to_waypoint);
+    else if (current_command_type == "detect_marker")
+        set_mission_state(detect_marker);
+    else if (current_command_type == "drop_payload")
+        set_mission_state(drop_payload);
+    else if (current_command_type == "end_mission")
+        mission_finished();
+    else
+        mission_abort("MissionControl::mode_decision_maker: Unknown command type");
+}
+
+/**
+ * Executes the "fly to waypoint" mode of the mission control.
+ * Activates the Waypoint Node and sends the command data as payload.
+ * If the job is finished successfully, returns to the decision maker for the next command.
+ */
 void MissionControl::mode_fly_to_waypoint()
 {
     if (get_state_first_loop())
     {
-        // Activate WaypointNode
-        // TODO continue here after reading in the Mission Definition File to know
-        // where to fly
+        // Activate Waypoint Node and send the command data as payload
+        send_control_json("/waypoint_node", true, commands.at(current_command_id).data);
     }
+
+    // If job finished, return to decision maker for next command
+    if (get_job_finished_successfully())
+    {
+        set_mission_state(decision_maker);
+    }
+}
+
+/**
+ * @brief Sends a control message to a target node.
+ *
+ * This function sends a control message to a target node identified by its target_id.
+ * The control message can be set as active or inactive, and can include a payload.
+ * If the control message is set as active, the function also updates the active node ID.
+ * If the target_id matches the current active node ID and the control message is set as inactive,
+ * the function clears the active node ID.
+ *
+ * @param target_id The ID of the target node.
+ * @param active Whether the control message is active or inactive.
+ * @param payload The payload of the control message.
+ */
+void MissionControl::send_control(const std::string &target_id, const bool active, const std::string payload)
+{
+    interfaces::msg::Control msg;
+    msg.target_id = target_id;
+    msg.active = active;
+    msg.payload = payload;
+
+    if (active)
+    {
+        set_active_node_id(target_id);
+    }
+    else if (target_id == get_active_node_id())
+    {
+        clear_active_node_id();
+    }
+
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::send_control: Publishing control message for node '%s': active: %d, payload: %s",
+                 target_id.c_str(), active, payload.c_str());
+
+    control_publisher->publish(msg);
+}
+
+/**
+ * @brief Sends a control JSON to a target ID.
+ *
+ * This function sends a control JSON to the specified target ID. The control JSON contains information about the control action to be performed.
+ *
+ * @note Look at the docs at `send_control` for more information
+ *
+ * @param target_id The ID of the target to which the control JSON is to be sent.
+ * @param active A boolean value indicating whether the control action is active or not.
+ * @param payload_json The JSON payload containing the control action information.
+ */
+void MissionControl::send_control_json(const std::string &target_id, const bool active, const nlohmann::json payload_json)
+{
+    std::string payload = "";
+
+    try
+    {
+        payload = payload_json.dump();
+    }
+    catch (const nlohmann::json::type_error &e)
+    {
+        mission_abort("MissionControl::send_control_json: Failed to dump payload_json: " + (std::string)e.what());
+    }
+
+    return send_control(target_id, active, payload);
 }
 
 /**
@@ -524,7 +683,38 @@ void MissionControl::mission_abort(std::string reason)
     RCLCPP_INFO(
         this->get_logger(),
         "MissionControl::mission_abort: Mission abort message sent, exiting now");
+
     exit(EXIT_FAILURE);
+}
+
+/**
+ * @brief Handles the completion of a mission.
+ *
+ * This function is called when a mission is finished successfully. It performs the following tasks:
+ * 1. Resets the internal state of the mission control.
+ * 2. Publishes a mission abort message with the sender ID and reason for mission completion.
+ * 3. Stops the node by exiting with a success status code.
+ */
+void MissionControl::mission_finished()
+{
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::mission_finished: Mission finished successfully");
+
+    // Reset internal state
+    clear_active_node_id();
+
+    // Publish abort message
+    interfaces::msg::MissionAbort msg;
+    msg.sender_id = get_fully_qualified_name();
+    msg.reason = "Successfully finished mission";
+    mission_abort_publisher->publish(msg);
+
+    // Stop node
+    RCLCPP_INFO(
+        this->get_logger(),
+        "MissionControl::mission_abort: Mission abort message sent, exiting now");
+
+    exit(EXIT_SUCCESS);
 }
 
 // Fail-Safe checks

@@ -10,7 +10,8 @@
  * and set the flag to true when the instance is destroyed.
  * @note Doesn't take ownership of the pointer event_loop_activeFlag
  */
-class EventLoopGuard {
+class EventLoopGuard
+{
 private:
   bool *event_loop_active;
   bool event_loop_active_init;
@@ -28,7 +29,8 @@ public:
    * to the opposite state on destruction.
    */
   EventLoopGuard(bool *event_loop_activeFlag, bool new_state)
-      : event_loop_active(event_loop_activeFlag) {
+      : event_loop_active(event_loop_activeFlag)
+  {
     event_loop_active = event_loop_activeFlag;
     *event_loop_active = new_state;
 
