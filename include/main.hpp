@@ -58,9 +58,9 @@ private:
                                               /// get_state_first_loop().
     std::map<std::string, ros_node> node_map; /// Has an entry for every ros node
     std::string active_node_id =
-        "";                                          /// node_id that is currently allowed to send data to the FCC
-                                                     /// interface, set to "" if none is allowed
-    
+        ""; /// node_id that is currently allowed to send data to the FCC
+            /// interface, set to "" if none is allowed
+
     size_t current_command_id = 0;
     std::vector<mission_file_lib::command> commands; /// Storage for current commands that
                                                      /// will be executed one by one
@@ -153,8 +153,8 @@ private:
     void mode_fly_to_waypoint();
 
     // Control Functions
-    void send_control(const std::string& target_id, const bool active, const std::string payload);
-    void send_control_json(const std::string& target_id, const bool active, const nlohmann::json payload_json);
+    void send_control(const std::string &target_id, const bool active, const std::string payload);
+    void send_control_json(const std::string &target_id, const bool active, const nlohmann::json payload_json);
 
     // Mission Abort
     void mission_abort(std::string reason);
