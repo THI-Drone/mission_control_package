@@ -40,6 +40,9 @@ install (TARGETS mission_file_lib
 # Mission Control Node
 add_executable(mission_control_node
                 src/mission_definition_file.cpp
+                src/basics.cpp
+                src/modes.cpp
+                src/callbacks.cpp
                 src/main.cpp)
 ament_target_dependencies(mission_control_node rclcpp interfaces common_package nlohmann_json)
 
