@@ -39,11 +39,21 @@
             }
          },
          {
-            "type": "detect_marker",
+            "type": "waypoint",
             "data": {
-               "detection_height_cm": 500,
-               "timeout_ms": 30000
+               "target_coordinate_lat": 48.767099,
+               "target_coordinate_lon": 11.434351,
+               "pre_wait_time_ms": 100,
+               "post_wait_time_ms": 200,
+               "cruise_height_cm": 2000,
+               "target_height_cm": 500,
+               "horizontal_speed_mps": 3.0,
+               "vertical_speed_mps": 1.0
             }
+         },
+         {
+            "type": "end_mission",
+            "data": {}
          }
       ],
       "1": [
