@@ -96,7 +96,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
 
         nlohmann::ordered_json geofence_json = safety_json.at("geofence");
 
-        std::vector<std::pair<float, float>> geofence_points;
+        std::vector<std::pair<double, double>> geofence_points;
         for (const auto &[key, geofence_point] : geofence_json.items())
         {
             // Loop through all geofence points
@@ -109,7 +109,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path, const bool
             printf("MissionDefinitionReader::read_file: Checking geofence point number: %ld\n", geofence_points.size());
             common_lib::CommandDefinitions::parse_check_json(geofence_point, geofence_definition);
 
-            std::pair<float, float> geofence_point_pair = {geofence_point.at("lat"), geofence_point.at("lon")};
+            std::pair<double, double> geofence_point_pair = {geofence_point.at("lat"), geofence_point.at("lon")};
 
             // Check that point is unique
             for (const auto &gp : geofence_points)
