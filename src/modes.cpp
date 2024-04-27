@@ -130,6 +130,9 @@ void MissionControl::mode_fly_to_waypoint()
 {
     if (get_state_first_loop())
     {
+        RCLCPP_INFO(this->get_logger(), "MissionControl::mode_fly_to_waypoint: Activating waypoint node");
+        RCLCPP_DEBUG(this->get_logger(), "MissionControl::mode_fly_to_waypoint: Data sent to waypoint node: %s", commands.at(current_command_id).data.dump().c_str());
+
         // Activate Waypoint Node and send the command data as payload
         send_control_json("/waypoint_node", true, commands.at(current_command_id).data);
     }
@@ -137,6 +140,7 @@ void MissionControl::mode_fly_to_waypoint()
     // If job finished, return to decision maker for next command
     if (get_job_finished_successfully())
     {
+        RCLCPP_INFO(this->get_logger(), "MissionControl::mode_fly_to_waypoint: Job finished successfully. Set mission state to 'decision_maker'.");
         set_mission_state(decision_maker);
     }
 }
