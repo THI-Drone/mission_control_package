@@ -64,6 +64,7 @@ void MissionControl::initiate_takeoff()
  */
 void MissionControl::mode_decision_maker()
 {
+    // Deactivate Event Loop as it is not needed for decision maker
     EventLoopGuard elg(&event_loop_active, false);
 
     RCLCPP_INFO(this->get_logger(), "MissionControl::mode_decision_maker: Decision Maker started");
@@ -127,7 +128,7 @@ void MissionControl::mode_decision_maker()
  * This function activates the waypoint node and sends the command data as payload.
  * It checks if the current command is of the correct type and aborts the mission if it's not.
  * If the job finished successfully, it sets the mission state to "decision_maker" for the next command.
- * 
+ *
  * @note This function ignores `job_finished_payload` as it is not relevant.
  */
 void MissionControl::mode_fly_to_waypoint()
