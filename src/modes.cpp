@@ -122,9 +122,13 @@ void MissionControl::mode_decision_maker()
 }
 
 /**
- * Executes the "fly to waypoint" mode of the mission control.
- * Activates the Waypoint Node and sends the command data as payload.
- * If the job is finished successfully, returns to the decision maker for the next command.
+ * @brief Executes the "fly_to_waypoint" mode of the mission control.
+ *
+ * This function activates the waypoint node and sends the command data as payload.
+ * It checks if the current command is of the correct type and aborts the mission if it's not.
+ * If the job finished successfully, it sets the mission state to "decision_maker" for the next command.
+ * 
+ * @note This function ignores `job_finished_payload` as it is not relevant.
  */
 void MissionControl::mode_fly_to_waypoint()
 {
@@ -132,6 +136,10 @@ void MissionControl::mode_fly_to_waypoint()
     {
         RCLCPP_INFO(this->get_logger(), "MissionControl::mode_fly_to_waypoint: Activating waypoint node");
         RCLCPP_DEBUG(this->get_logger(), "MissionControl::mode_fly_to_waypoint: Data sent to waypoint node: %s", commands.at(current_command_id).data.dump().c_str());
+
+        // Check that current command is of the correct type
+        if (commands.at(current_command_id).type != "waypoint")
+            mission_abort("MissionControl::mode_fly_to_waypoint: command has the wrong type: Expected: 'waypoint', Got: '" + commands.at(current_command_id).type + "'");
 
         // Activate Waypoint Node and send the command data as payload
         send_control_json("/waypoint_node", true, commands.at(current_command_id).data);
