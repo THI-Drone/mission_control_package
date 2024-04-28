@@ -42,6 +42,10 @@ typedef enum MissionState
 
 class MissionControl : public common_lib::CommonNode
 {
+    /**
+     * @brief Class for handling the mission logic.
+     */
+
 private:
     // General
     MissionState_t mission_state = prepare_mission; /// Main mission state

@@ -43,6 +43,7 @@ add_executable(mission_control_node
                 src/basics.cpp
                 src/modes.cpp
                 src/callbacks.cpp
+                src/mission_control.cpp
                 src/main.cpp)
 ament_target_dependencies(mission_control_node rclcpp interfaces common_package nlohmann_json)
 

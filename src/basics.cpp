@@ -1,4 +1,4 @@
-#include "main.hpp"
+#include "mission_control.hpp"
 
 /**
  * @brief Sets the standby configuration

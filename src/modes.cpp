@@ -1,4 +1,4 @@
-#include "main.hpp"
+#include "mission_control.hpp"
 
 /**
  * @brief Prepares the mission by reading the mission file and setting the standby configuration.
