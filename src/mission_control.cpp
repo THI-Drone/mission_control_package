@@ -35,9 +35,9 @@ MissionControl::MissionControl() : CommonNode("mission_control")
             "mission_start", 10,
             std::bind(&MissionControl::mission_start, this, _1));
 
-    // Mission Abort
-    mission_abort_publisher =
-        this->create_publisher<interfaces::msg::MissionAbort>("mission_abort",
+    // Mission Finished
+    mission_finished_publisher =
+        this->create_publisher<interfaces::msg::MissionFinished>("mission_finished",
                                                               10);
 
     // Control Publisher
@@ -189,15 +189,16 @@ void MissionControl::mission_abort(std::string reason)
     clear_active_node_id();
 
     // Publish abort message
-    interfaces::msg::MissionAbort msg;
+    interfaces::msg::MissionFinished msg;
     msg.sender_id = get_fully_qualified_name();
+    msg.error_code = EXIT_FAILURE;
     msg.reason = reason;
-    mission_abort_publisher->publish(msg);
+    mission_finished_publisher->publish(msg);
 
     // Stop node
     RCLCPP_INFO(
         this->get_logger(),
-        "MissionControl::mission_abort: Mission abort message sent, exiting now");
+        "MissionControl::mission_abort: Mission finished failure message sent, exiting now");
 
     exit(EXIT_FAILURE);
 }
@@ -219,15 +220,16 @@ void MissionControl::mission_finished()
     clear_active_node_id();
 
     // Publish abort message
-    interfaces::msg::MissionAbort msg;
+    interfaces::msg::MissionFinished msg;
     msg.sender_id = get_fully_qualified_name();
+    msg.error_code = EXIT_SUCCESS;
     msg.reason = "Successfully finished mission";
-    mission_abort_publisher->publish(msg);
+    mission_finished_publisher->publish(msg);
 
     // Stop node
     RCLCPP_INFO(
         this->get_logger(),
-        "MissionControl::mission_abort: Mission abort message sent, exiting now");
+        "MissionControl::mission_finished: Mission finished message sent, exiting now");
 
     exit(EXIT_SUCCESS);
 }

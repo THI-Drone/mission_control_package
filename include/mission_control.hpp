@@ -20,7 +20,7 @@
 #include "interfaces/msg/fly_to_coord.hpp"
 #include "interfaces/msg/heartbeat.hpp"
 #include "interfaces/msg/job_finished.hpp"
-#include "interfaces/msg/mission_abort.hpp"
+#include "interfaces/msg/mission_finished.hpp"
 #include "interfaces/msg/mission_start.hpp"
 
 /**
@@ -90,9 +90,9 @@ private:
     rclcpp::Subscription<interfaces::msg::MissionStart>::SharedPtr
         mission_start_subscription;
 
-    // Mission Abort
-    rclcpp::Publisher<interfaces::msg::MissionAbort>::SharedPtr
-        mission_abort_publisher;
+    // Mission Finished
+    rclcpp::Publisher<interfaces::msg::MissionFinished>::SharedPtr
+        mission_finished_publisher;
 
     // Fail-Safe Checks
     rclcpp::Subscription<interfaces::msg::FlyToCoord>::SharedPtr
