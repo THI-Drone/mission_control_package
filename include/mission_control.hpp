@@ -37,7 +37,6 @@ typedef enum MissionState
     fly_to_waypoint,
     detect_marker,
     drop_payload,
-    end_mission,
 } MissionState_t;
 
 class MissionControl : public common_lib::CommonNode
