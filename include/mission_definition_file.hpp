@@ -17,11 +17,16 @@ namespace mission_file_lib
      */
     struct safety
     {
-        std::vector<std::pair<double, double>> geofence_points;                  ///< Vector of geofence points. Each point is represented by a pair of floats (latitude, longitude).
-        uint16_t max_height_cm = common_lib::MAX_FLIGHT_HEIGHT_CM;             ///< Maximum flight height in centimeters.
-        uint16_t min_cruise_height_cm = common_lib::MIN_CRUISE_HEIGHT_CM;      ///< Minimum cruise height in centimeters.
-        float max_horizontal_speed_mps = common_lib::MAX_HORIZONTAL_SPEED_MPS; ///< Maximum horizontal speed in meters per second.
-        float max_vertical_speed_mps = common_lib::MAX_VERTICAL_SPEED_MPS;     ///< Maximum vertical speed in meters per second.
+        /// Vector of geofence points. Each point is represented by a pair of floats (latitude, longitude).
+        std::vector<std::pair<double, double>> geofence_points;
+        /// Maximum flight height in centimeters
+        uint16_t max_height_cm = common_lib::MAX_FLIGHT_HEIGHT_CM;
+        /// Minimum cruise height in centimeters
+        uint16_t min_cruise_height_cm = common_lib::MIN_CRUISE_HEIGHT_CM;
+        /// Maximum horizontal speed in meters per second
+        float max_horizontal_speed_mps = common_lib::MAX_HORIZONTAL_SPEED_MPS;
+        /// Maximum vertical speed in meters per second
+        float max_vertical_speed_mps = common_lib::MAX_VERTICAL_SPEED_MPS;
     };
 
     /**
