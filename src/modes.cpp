@@ -33,6 +33,9 @@ void MissionControl::initiate_takeoff()
         RCLCPP_INFO(this->get_logger(),
                     "MissionControl::initiate_takeoff: Takeoff initated");
 
+        this->activate();
+        set_active_node_id(this->get_name());
+
         // TODO check if drone is in the air -> abort if false
 
         // TODO save takeoff coordinates
@@ -45,6 +48,9 @@ void MissionControl::initiate_takeoff()
     // If takeoff finished
     RCLCPP_INFO(this->get_logger(),
                 "MissionControl::initiate_takeoff: Takeoff finished");
+
+    this->deactivate();
+    clear_active_node_id();
 
     set_mission_state(decision_maker);
     RCLCPP_INFO(
