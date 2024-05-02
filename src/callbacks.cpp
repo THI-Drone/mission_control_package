@@ -129,14 +129,14 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg)
 }
 
 /**
- * @brief Checks the sender of each FlyToCoord message
+ * @brief Checks the sender of each UAVWaypointCommand message
  *
- * Aborts mission if an unauthorized sender is sending on the fly_to_coord
+ * Aborts mission if an unauthorized sender is sending on the UAVWaypointCommand
  * topic.
  *
- * @param msg The FlyToCoord message to be checked.
+ * @param msg The UAVWaypointCommand message to be checked.
  */
-void MissionControl::check_control(const interfaces::msg::FlyToCoord &msg)
+void MissionControl::check_control(const interfaces::msg::UAVWaypointCommand &msg)
 {
     RCLCPP_DEBUG(
         this->get_logger(),
@@ -177,7 +177,7 @@ void MissionControl::check_control(const interfaces::msg::FlyToCoord &msg)
 void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg)
 {
     // Throw away own heartbeat
-    if (msg.sender_id == get_fully_qualified_name())
+    if (msg.sender_id == get_name())
         return;
 
     if (node_map.find(msg.sender_id) == node_map.end())

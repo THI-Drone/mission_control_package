@@ -17,7 +17,7 @@
 
 // Message includes
 #include "interfaces/msg/control.hpp"
-#include "interfaces/msg/fly_to_coord.hpp"
+#include "interfaces/msg/uav_waypoint_command.hpp"
 #include "interfaces/msg/heartbeat.hpp"
 #include "interfaces/msg/job_finished.hpp"
 #include "interfaces/msg/mission_finished.hpp"
@@ -94,7 +94,7 @@ private:
         mission_finished_publisher;
 
     // Fail-Safe Checks
-    rclcpp::Subscription<interfaces::msg::FlyToCoord>::SharedPtr
+    rclcpp::Subscription<interfaces::msg::UAVWaypointCommand>::SharedPtr
         control_subscription;
 
     // Heartbeat
@@ -166,7 +166,7 @@ private:
     void mission_finished();
 
     // Fail-Safe checks
-    void check_control(const interfaces::msg::FlyToCoord &msg);
+    void check_control(const interfaces::msg::UAVWaypointCommand &msg);
 
     // Heartbeat
     void heartbeat_callback(const interfaces::msg::Heartbeat &msg);

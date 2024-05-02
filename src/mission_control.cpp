@@ -5,7 +5,7 @@ using std::placeholders::_1;
 MissionControl::MissionControl() : CommonNode("mission_control")
 {
     // Register nodes
-    const std::string node_names[] = {"/telemetry_node", "/waypoint_node"};
+    const std::string node_names[] = {"telemetry_node", "waypoint_node"};
 
     for (const std::string &name : node_names)
     {
@@ -13,7 +13,7 @@ MissionControl::MissionControl() : CommonNode("mission_control")
     }
 
     // Allowing waypoint_node to start the mission
-    node_map["/waypoint_node"].can_start_mission = true; // TODO change with real node_id
+    node_map["waypoint_node"].can_start_mission = true; // TODO change with real node_id
 
     // Initialize Heartbeat
     heartbeat_subscription =
@@ -45,8 +45,8 @@ MissionControl::MissionControl() : CommonNode("mission_control")
         this->create_publisher<interfaces::msg::Control>("control", 10);
 
     // Fail-Safe checks
-    control_subscription = this->create_subscription<interfaces::msg::FlyToCoord>(
-        "fly_to_coord", 10, std::bind(&MissionControl::check_control, this, _1));
+    control_subscription = this->create_subscription<interfaces::msg::UAVWaypointCommand>(
+        "uav_waypoint_command", 10, std::bind(&MissionControl::check_control, this, _1));
 
     // Initialize Event Loop
     event_loop_timer = this->create_wall_timer(
@@ -190,7 +190,7 @@ void MissionControl::mission_abort(std::string reason)
 
     // Publish abort message
     interfaces::msg::MissionFinished msg;
-    msg.sender_id = get_fully_qualified_name();
+    msg.sender_id = get_name();
     msg.error_code = EXIT_FAILURE;
     msg.reason = reason;
     mission_finished_publisher->publish(msg);
@@ -221,7 +221,7 @@ void MissionControl::mission_finished()
 
     // Publish abort message
     interfaces::msg::MissionFinished msg;
-    msg.sender_id = get_fully_qualified_name();
+    msg.sender_id = get_name();
     msg.error_code = EXIT_SUCCESS;
     msg.reason = "Successfully finished mission";
     mission_finished_publisher->publish(msg);

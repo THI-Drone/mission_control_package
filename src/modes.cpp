@@ -143,7 +143,7 @@ void MissionControl::mode_fly_to_waypoint()
             mission_abort("MissionControl::mode_fly_to_waypoint: command has the wrong type: Expected: 'waypoint', Got: '" + commands.at(current_command_id).type + "'");
 
         // Activate Waypoint Node and send the command data as payload
-        send_control_json("/waypoint_node", true, commands.at(current_command_id).data);
+        send_control_json("waypoint_node", true, commands.at(current_command_id).data);
     }
 
     // If job finished, return to decision maker for next command
