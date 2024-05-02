@@ -223,7 +223,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg)
     // Check timestamp
     rclcpp::Time timestamp_now = this->now();
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
-        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(10)))
+        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(heartbeat_max_timestamp_age_ms)))
     {
         RCLCPP_ERROR(
             get_logger(),
