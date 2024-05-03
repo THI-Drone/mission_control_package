@@ -1,0 +1,16 @@
+name: Colcon Build, Test, Coverage and Autoformat
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - pre-release
+      - release
+
+  workflow_dispatch:
+
+
+jobs:
+  Autoformat-and-Test:
+    uses: "THI-Drone/workflow/.github/workflows/workflow.yml@main"
+
