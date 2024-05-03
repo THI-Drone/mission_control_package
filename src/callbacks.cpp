@@ -3,9 +3,11 @@
 /**
  * @brief Callback function for handling job_finished messages.
  *
- * This function is called when a job_finished message is received. It performs the following tasks:
+ * This function is called when a job_finished message is received. It performs
+ * the following tasks:
  * 1. Parses the JSON payload from the message.
- * 2. Checks the error code of the message. If it is not EXIT_SUCCESS, aborts the mission.
+ * 2. Checks the error code of the message. If it is not EXIT_SUCCESS, aborts
+ * the mission.
  * 3. Ignores the message if the sender node is not active.
  * 4. Sends a control message to explicitly deactivate the sender node.
  * 5. Updates the internal state by clearing the active node ID.
@@ -15,27 +17,24 @@
  * @param msg The job_finished message received.
  */
 void MissionControl::job_finished_callback(
-    const interfaces::msg::JobFinished &msg)
-{
+    const interfaces::msg::JobFinished &msg) {
     // Try to parse JSON
     nlohmann::json payload;
-    try
-    {
+    try {
         payload = nlohmann::json::parse(msg.payload);
-    }
-    catch (const nlohmann::json::exception &e)
-    {
-        RCLCPP_ERROR(this->get_logger(), "MissionControl::job_finished_callback: "
-                                         "Failed to parse json in payload");
+    } catch (const nlohmann::json::exception &e) {
+        RCLCPP_ERROR(this->get_logger(),
+                     "MissionControl::job_finished_callback: "
+                     "Failed to parse json in payload");
     }
 
     // Check error code
-    if (msg.error_code != EXIT_SUCCESS)
-    {
+    if (msg.error_code != EXIT_SUCCESS) {
         // Abort mission
-        std::string error_msg = "MissionControl::job_finished_callback: Received "
-                                "job_finished message with error_code: " +
-                                msg.error_code;
+        std::string error_msg =
+            "MissionControl::job_finished_callback: Received "
+            "job_finished message with error_code: " +
+            msg.error_code;
 
         if (payload.contains("error_msg"))
             error_msg += ". Error Message: " + payload.at("error_msg").dump();
@@ -46,8 +45,7 @@ void MissionControl::job_finished_callback(
 
     // Ignore message if sender node is not active as this might be a delayed
     // message or a programming error in the sender node
-    if (msg.sender_id != get_active_node_id())
-    {
+    if (msg.sender_id != get_active_node_id()) {
         RCLCPP_WARN(this->get_logger(),
                     "MissionControl::job_finished_callback: Got a successfull "
                     "job_finished message from an inactive node: %s",
@@ -82,16 +80,14 @@ void MissionControl::job_finished_callback(
  *
  * @param msg The mission start command message
  */
-void MissionControl::mission_start(const interfaces::msg::MissionStart &msg)
-{
+void MissionControl::mission_start(const interfaces::msg::MissionStart &msg) {
     RCLCPP_INFO(
         this->get_logger(),
         "MissionControl::mission_start: Received mission start command from %s",
         msg.sender_id.c_str());
 
     // Check mission state is armed
-    if (get_mission_state() != armed)
-    {
+    if (get_mission_state() != armed) {
         RCLCPP_ERROR(
             get_logger(),
             "Mission start command received without being in 'armed' state");
@@ -99,8 +95,7 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg)
     }
 
     // Check that sender node id is known
-    if (node_map.find(msg.sender_id) == node_map.end())
-    {
+    if (node_map.find(msg.sender_id) == node_map.end()) {
         RCLCPP_ERROR(get_logger(),
                      "MissionControl::mission_start: Sender node unknown: %s",
                      msg.sender_id.c_str());
@@ -108,8 +103,7 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg)
     }
 
     // Check that sender has permission to start mission
-    if (!node_map[msg.sender_id].can_start_mission)
-    {
+    if (!node_map[msg.sender_id].can_start_mission) {
         RCLCPP_ERROR(get_logger(),
                      "MissionControl::mission_start: Sender is not allowed to "
                      "start the mission: %s",
@@ -136,22 +130,22 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg)
  *
  * @param msg The UAVWaypointCommand message to be checked.
  */
-void MissionControl::check_control(const interfaces::msg::UAVWaypointCommand &msg)
-{
+void MissionControl::check_control(
+    const interfaces::msg::UAVWaypointCommand &msg) {
     RCLCPP_DEBUG(
         this->get_logger(),
         "MissionControl::check_control: Checking FlyToCoord message from %s",
         msg.sender_id.c_str());
 
     if (msg.sender_id != get_active_node_id())
-        mission_abort("Unauthorized node sending on fly_to_coord topic registered");
+        mission_abort(
+            "Unauthorized node sending on fly_to_coord topic registered");
 
-    RCLCPP_DEBUG(
-        this->get_logger(),
-        "MissionControl::check_control: Checking FlyToCoord message successfull");
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::check_control: Checking FlyToCoord message "
+                 "successfull");
 }
 
-// Heartbeat
 /**
  * @brief Callback function for handling heartbeat messages.
  *
@@ -174,48 +168,45 @@ void MissionControl::check_control(const interfaces::msg::UAVWaypointCommand &ms
  *
  * @param msg The received heartbeat message.
  */
-void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg)
-{
+void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     // Throw away own heartbeat
-    if (msg.sender_id == get_name())
-        return;
+    if (msg.sender_id == get_name()) return;
 
-    if (node_map.find(msg.sender_id) == node_map.end())
-    {
-        RCLCPP_ERROR(get_logger(),
-                     "MissionControl::heartbeat_callback: Received unregistered "
-                     "heartbeat: %s",
-                     msg.sender_id.c_str());
+    if (node_map.find(msg.sender_id) == node_map.end()) {
+        RCLCPP_ERROR(
+            get_logger(),
+            "MissionControl::heartbeat_callback: Received unregistered "
+            "heartbeat: %s",
+            msg.sender_id.c_str());
         return;
     }
 
     // Check that active state matches the internal state
-    if (msg.active && (msg.sender_id != get_active_node_id()))
-    {
-        RCLCPP_FATAL(get_logger(),
-                     "MissionControl::heartbeat_callback: Node '%s' is active even "
-                     "though it should be deactive",
-                     msg.sender_id.c_str());
+    if (msg.active && (msg.sender_id != get_active_node_id())) {
+        RCLCPP_FATAL(
+            get_logger(),
+            "MissionControl::heartbeat_callback: Node '%s' is active even "
+            "though it should be deactive",
+            msg.sender_id.c_str());
         mission_abort("A node was active even though it should be deactive");
     }
-    if ((!msg.active) && (msg.sender_id == get_active_node_id()))
-    {
-        RCLCPP_FATAL(get_logger(),
-                     "MissionControl::heartbeat_callback: Node '%s' is deactive "
-                     "even though it should be active",
-                     msg.sender_id.c_str());
+    if ((!msg.active) && (msg.sender_id == get_active_node_id())) {
+        RCLCPP_FATAL(
+            get_logger(),
+            "MissionControl::heartbeat_callback: Node '%s' is deactive "
+            "even though it should be active",
+            msg.sender_id.c_str());
         mission_abort("A node was deactive even though it should be active");
     }
 
     // Check tick
     heartbeat_payload &heartbeat = node_map[msg.sender_id].hb_payload;
     if ((msg.tick == heartbeat.tick) ||
-        (msg.tick <= heartbeat.tick && msg.tick != 0))
-    {
-        RCLCPP_ERROR(
-            get_logger(),
-            "MissionControl::heartbeat_callback: Invalid tick received from: %s",
-            msg.sender_id.c_str());
+        (msg.tick <= heartbeat.tick && msg.tick != 0)) {
+        RCLCPP_ERROR(get_logger(),
+                     "MissionControl::heartbeat_callback: Invalid tick "
+                     "received from: %s",
+                     msg.sender_id.c_str());
         return;
     }
     heartbeat.tick = msg.tick;
@@ -223,13 +214,14 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg)
     // Check timestamp
     rclcpp::Time timestamp_now = this->now();
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
-        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(heartbeat_max_timestamp_age_ms)))
-    {
-        RCLCPP_ERROR(
-            get_logger(),
-            "MissionControl::heartbeat_callback: Received too old timestamp: %s",
-            msg.sender_id.c_str());
-        mission_abort("A too old timestamp was received in a heartbeat message");
+        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+            heartbeat_max_timestamp_age_ms))) {
+        RCLCPP_ERROR(get_logger(),
+                     "MissionControl::heartbeat_callback: Received too old "
+                     "timestamp: %s",
+                     msg.sender_id.c_str());
+        mission_abort(
+            "A too old timestamp was received in a heartbeat message");
     }
 
     heartbeat.received = true;
@@ -247,21 +239,19 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg)
  * logged. If the mission is not in 'selfcheck' state, the mission will be
  * aborted.
  */
-void MissionControl::heartbeat_timer_callback()
-{
+void MissionControl::heartbeat_timer_callback() {
     bool err_flag = false;
 
-    for (auto &nm : node_map)
-    {
+    for (auto &nm : node_map) {
         heartbeat_payload &hp = nm.second.hb_payload;
 
-        if (hp.received == false)
-        {
+        if (hp.received == false) {
             err_flag = true;
-            RCLCPP_FATAL(this->get_logger(),
-                         "MissionControl::heartbeat_timer_callback: No heartbeat "
-                         "from '%s' received!",
-                         nm.first.c_str());
+            RCLCPP_FATAL(
+                this->get_logger(),
+                "MissionControl::heartbeat_timer_callback: No heartbeat "
+                "from '%s' received!",
+                nm.first.c_str());
         }
 
         hp.received = false;
@@ -269,17 +259,52 @@ void MissionControl::heartbeat_timer_callback()
 
     heartbeat_received_all = !err_flag;
 
-    if (heartbeat_received_all)
-    {
-        RCLCPP_DEBUG(
-            this->get_logger(),
-            "MissionControl::heartbeat_timer_callback: All heartbeats received");
-    }
-    else
-    {
-        if (get_mission_state() != selfcheck && get_mission_state() != prepare_mission)
-        {
-            mission_abort("Missing heartbeat while not in 'selfcheck' or 'prepare_mission' state");
+    if (heartbeat_received_all) {
+        RCLCPP_DEBUG(this->get_logger(),
+                     "MissionControl::heartbeat_timer_callback: All heartbeats "
+                     "received");
+    } else {
+        if (get_mission_state() != selfcheck &&
+            get_mission_state() != prepare_mission) {
+            mission_abort(
+                "Missing heartbeat while not in 'selfcheck' or "
+                "'prepare_mission' state");
         }
     }
+}
+
+/**
+ * @brief Callback function for handling mission progress messages.
+ *
+ * This function is called when a mission progress message is received. It logs
+ * the received progress information and performs checks on the timestamp of the
+ * message. If the timestamp is too old, a warning is issued and the message is
+ * ignored. Otherwise, the progress value is stored in the `mission_progress`
+ * member variable.
+ *
+ * @param msg The mission progress message received.
+ */
+void MissionControl::mission_progress_callback(
+    const interfaces::msg::MissionProgress &msg) {
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::mission_progress_callback: Received mission "
+                 "progress from '%s': progress: %f / 1.0",
+                 msg.sender_id.c_str(), msg.progress);
+
+    // Check timestamp
+    rclcpp::Time timestamp_now = this->now();
+    if (timestamp_now - rclcpp::Time(msg.time_stamp) >
+        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+            max_progress_msg_time_difference_ms))) {
+        // Warn and ignore message
+        RCLCPP_WARN(get_logger(),
+                    "MissionControl::mission_progress_callback: Received too "
+                    "old timestamp in progress message: %s. Ignoring message.",
+                    msg.sender_id.c_str());
+
+        return;
+    }
+
+    // Store value
+    mission_progress = msg.progress;
 }

@@ -1,33 +1,36 @@
 #pragma once
 
-#include "rclcpp/rclcpp.hpp"
+#include <stddef.h>
+
 #include <chrono>
 #include <functional>
 #include <map>
 #include <memory>
-#include <unordered_set>
 #include <nlohmann/json.hpp>
-#include <stddef.h>
+#include <unordered_set>
 #include <vector>
 
 #include "common_package/common_node.hpp"
 #include "event_loop_guard.hpp"
-#include "structs.hpp"
 #include "mission_definition_file.hpp"
+#include "rclcpp/rclcpp.hpp"
+#include "structs.hpp"
+
 
 // Message includes
 #include "interfaces/msg/control.hpp"
-#include "interfaces/msg/uav_waypoint_command.hpp"
 #include "interfaces/msg/heartbeat.hpp"
 #include "interfaces/msg/job_finished.hpp"
 #include "interfaces/msg/mission_finished.hpp"
+#include "interfaces/msg/mission_progress.hpp"
 #include "interfaces/msg/mission_start.hpp"
+#include "interfaces/msg/uav_waypoint_command.hpp"
+
 
 /**
  * @brief Enumeration representing the different states of a mission.
  */
-typedef enum MissionState
-{
+typedef enum MissionState {
     prepare_mission,
     selfcheck,
     check_drone_configuration,
@@ -36,46 +39,50 @@ typedef enum MissionState
     decision_maker,
     fly_to_waypoint,
     detect_marker,
-    drop_payload,
 } MissionState_t;
 
-class MissionControl : public common_lib::CommonNode
-{
+class MissionControl : public common_lib::CommonNode {
     /**
      * @brief Class for handling the mission logic.
      */
 
-private:
+   private:
     // General
-    MissionState_t mission_state = prepare_mission; /// Main mission state
-    std::string active_marker_name = "init";        /// Name of the marker that is currently active
+    MissionState_t mission_state = prepare_mission;  //!< Main mission state
+    std::string active_marker_name =
+        "init";  //!< Name of the marker that is currently active
     bool job_finished_successfully =
-        false; /// Will be set to true after a successfull job_finished message
-               /// was received from the active node
+        false;  //!< Will be set to true after a successfull job_finished
+                //!< message was received from the active node
     nlohmann::json
-        job_finished_payload; /// If a job finished successfully, the payload will
-                              /// be stored here for future usage
+        job_finished_payload;  //!< If a job finished successfully, the payload
+                               //!< will be stored here for future usage
     bool state_first_loop =
-        true;                                 /// If set to true, the first event loop after a mission_state
-                                              /// change is happening. Will be set to false when calling
-                                              /// get_state_first_loop().
-    std::map<std::string, ros_node> node_map; /// Has an entry for every ros node
+        true;  //!< If set to true, the first event loop after a mission_state
+               //!< change is happening. Will be set to false when calling
+               //!< get_state_first_loop().
+    std::map<std::string, ros_node>
+        node_map;  //!< Has an entry for every ros node
     std::string active_node_id =
-        ""; /// node_id that is currently allowed to send data to the FCC
-            /// interface, set to "" if none is allowed
+        "";  //!< node_id that is currently allowed to send data to the FCC
+             //!< interface, set to "" if none is allowed
 
     size_t current_command_id = 0;
-    std::vector<mission_file_lib::command> commands; /// Storage for current commands that
-                                                     /// will be executed one by one
+    std::vector<mission_file_lib::command>
+        commands;  //!< Storage for current commands that
+                   //!< will be executed one by one
 
     // Mission Definition File
     mission_file_lib::MissionDefinitionReader mission_definition_reader;
     std::unordered_set<std::string> executed_marker_names;
 
+    // Mission Progress
+    float mission_progress = 0.0;
+
     // Event Loop
     const uint32_t event_loop_time_delta_ms = 100;
     bool event_loop_active =
-        true; /// If set to true, the event loop will be executed periodically
+        true;  //!< If set to true, the event loop will be executed periodically
     rclcpp::TimerBase::SharedPtr event_loop_timer;
 
     // Job finished
@@ -98,19 +105,26 @@ private:
         control_subscription;
 
     // Heartbeat
-    /// Heartbeat period in ms
-    static constexpr uint16_t heartbeat_period_ms = 500;
-    /// Maximum allowed time difference between timestamp in heartbeat message and current time
-    static constexpr uint16_t heartbeat_max_timestamp_age_ms = 50;
-    /// true if all heartbeats we're received in the last timeframe, otherwise false
-    bool heartbeat_received_all = false;
+    static constexpr uint16_t heartbeat_period_ms =
+        500;  //!< Heartbeat period in ms
+    static constexpr uint16_t heartbeat_max_timestamp_age_ms =
+        50;  //!< Maximum allowed time difference between timestamp in heartbeat
+             //!< message and current time
+    bool heartbeat_received_all =
+        false;  //!< true if all heartbeats we're received in the last
+                //!< timeframe, otherwise false
     rclcpp::TimerBase::SharedPtr heartbeat_timer;
-    rclcpp::Subscription<interfaces::msg::Heartbeat>::SharedPtr heartbeat_subscription;
+    rclcpp::Subscription<interfaces::msg::Heartbeat>::SharedPtr
+        heartbeat_subscription;
 
-public:
+    // FCC Bridge callbacks
+    static constexpr uint16_t max_progress_msg_time_difference_ms =
+        500;  //!< Maximum age of a progress message from FCC bridge
+
+   public:
     MissionControl();
 
-private:
+   private:
     // Event Loop
     void event_loop();
 
@@ -156,8 +170,10 @@ private:
     void mode_fly_to_waypoint();
 
     // Control Functions
-    void send_control(const std::string &target_id, const bool active, const std::string payload);
-    void send_control_json(const std::string &target_id, const bool active, const nlohmann::json payload_json);
+    void send_control(const std::string &target_id, const bool active,
+                      const std::string payload);
+    void send_control_json(const std::string &target_id, const bool active,
+                           const nlohmann::json payload_json);
 
     // Mission Abort
     void mission_abort(std::string reason);
@@ -171,4 +187,7 @@ private:
     // Heartbeat
     void heartbeat_callback(const interfaces::msg::Heartbeat &msg);
     void heartbeat_timer_callback();
+
+    // FCC Bridge callbacks
+    void mission_progress_callback(const interfaces::msg::MissionProgress &msg);
 };

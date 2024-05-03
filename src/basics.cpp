@@ -15,17 +15,17 @@ void MissionControl::set_standby_config() { clear_active_node_id(); }
  * `job_finished_successfully` flag is set to false and the `state_first_loop`
  * flag is set to true. After updating the mission state, a debug message is
  * logged.
+ * Additionally resets `mission_progress` to 0.
  *
  * @param new_mission_state The new mission state to set.
  */
-void MissionControl::set_mission_state(const MissionState_t new_mission_state)
-{
-    if (mission_state != new_mission_state)
-    {
+void MissionControl::set_mission_state(const MissionState_t new_mission_state) {
+    if (mission_state != new_mission_state) {
         job_finished_successfully = false;
         state_first_loop = true;
     }
 
+    mission_progress = 0.0;
     mission_state = new_mission_state;
 
     RCLCPP_DEBUG(this->get_logger(),
@@ -42,8 +42,7 @@ void MissionControl::set_mission_state(const MissionState_t new_mission_state)
  *
  * @param node_id The ID of the node to set as active.
  */
-void MissionControl::set_active_node_id(std::string node_id)
-{
+void MissionControl::set_active_node_id(std::string node_id) {
     RCLCPP_DEBUG(this->get_logger(),
                  "MissionControl::set_active_node_id: Set active_node_id to %s",
                  node_id.c_str());
@@ -57,11 +56,12 @@ void MissionControl::set_active_node_id(std::string node_id)
  *
  * @param new_active_marker_name The new active marker name.
  */
-void MissionControl::set_active_marker_name(const std::string &new_active_marker_name)
-{
-    RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::set_active_marker_name: Set active_marker_name to %s",
-                 new_active_marker_name.c_str());
+void MissionControl::set_active_marker_name(
+    const std::string &new_active_marker_name) {
+    RCLCPP_DEBUG(
+        this->get_logger(),
+        "MissionControl::set_active_marker_name: Set active_marker_name to %s",
+        new_active_marker_name.c_str());
 
     active_marker_name = new_active_marker_name;
 }
@@ -71,10 +71,10 @@ void MissionControl::set_active_marker_name(const std::string &new_active_marker
  *
  * This function clears the active node ID by setting it to an empty string.
  */
-void MissionControl::clear_active_node_id()
-{
-    RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::clear_active_node_id: Cleared active node id");
+void MissionControl::clear_active_node_id() {
+    RCLCPP_DEBUG(
+        this->get_logger(),
+        "MissionControl::clear_active_node_id: Cleared active node id");
     active_node_id = "";
 }
 
@@ -87,11 +87,9 @@ void MissionControl::clear_active_node_id()
  *
  * @return False if the first loop was already triggered, true otherwise.
  */
-bool MissionControl::get_state_first_loop()
-{
+bool MissionControl::get_state_first_loop() {
     // Check if first loop was already triggered
-    if (!state_first_loop)
-        return false;
+    if (!state_first_loop) return false;
 
     // Set first loop to false and return true
     state_first_loop = false;
@@ -106,15 +104,11 @@ bool MissionControl::get_state_first_loop()
  *
  * @return true if the job finished successfully, false otherwise.
  */
-bool MissionControl::get_job_finished_successfully()
-{
-    if (job_finished_successfully)
-    {
+bool MissionControl::get_job_finished_successfully() {
+    if (job_finished_successfully) {
         job_finished_successfully = false;
         return true;
-    }
-    else
-    {
+    } else {
         return false;
     }
 }
@@ -127,8 +121,7 @@ bool MissionControl::get_job_finished_successfully()
  *
  * @return The payload for the finished job.
  */
-nlohmann::json MissionControl::get_job_finished_payload()
-{
+nlohmann::json MissionControl::get_job_finished_payload() {
     nlohmann::json res = job_finished_payload;
 
     // Clear the job_finished_payload
