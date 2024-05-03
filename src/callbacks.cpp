@@ -181,22 +181,44 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
         return;
     }
 
-    // Check that active state matches the internal state
-    if (msg.active && (msg.sender_id != get_active_node_id())) {
-        RCLCPP_FATAL(
-            get_logger(),
-            "MissionControl::heartbeat_callback: Node '%s' is active even "
-            "though it should be deactive",
-            msg.sender_id.c_str());
-        mission_abort("A node was active even though it should be deactive");
-    }
-    if ((!msg.active) && (msg.sender_id == get_active_node_id())) {
-        RCLCPP_FATAL(
-            get_logger(),
-            "MissionControl::heartbeat_callback: Node '%s' is deactive "
-            "even though it should be active",
-            msg.sender_id.c_str());
-        mission_abort("A node was deactive even though it should be active");
+    // Separate check for FCC bridge as that is a special case
+    if (node_map[msg.sender_id].is_fcc_bridge) {
+        if ((!msg.active) && get_mission_state() != selfcheck &&
+            get_mission_state() != prepare_mission) {
+            RCLCPP_FATAL(
+                get_logger(),
+                "MissionControl::heartbeat_callback: Node '%s' is no longer "
+                "active but is required to be active for the mission",
+                msg.sender_id.c_str());
+
+            mission_abort("MissionControl::heartbeat_callback: Node '" +
+                          msg.sender_id +
+                          "' is no longer active but is required to be active "
+                          "for the mission");
+        } else {
+            // Nothing to do here, as the FCC bridge should always be active if
+            // not in the 'selfcheck' or 'prepare_mission' state
+        }
+    } else {
+        // Check that active state matches the internal state
+        if (msg.active && (msg.sender_id != get_active_node_id())) {
+            RCLCPP_FATAL(
+                get_logger(),
+                "MissionControl::heartbeat_callback: Node '%s' is active even "
+                "though it should be deactive",
+                msg.sender_id.c_str());
+            mission_abort(
+                "A node was active even though it should be deactive");
+        }
+        if ((!msg.active) && (msg.sender_id == get_active_node_id())) {
+            RCLCPP_FATAL(
+                get_logger(),
+                "MissionControl::heartbeat_callback: Node '%s' is deactive "
+                "even though it should be active",
+                msg.sender_id.c_str());
+            mission_abort(
+                "A node was deactive even though it should be active");
+        }
     }
 
     // Check tick
@@ -225,6 +247,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     }
 
     heartbeat.received = true;
+    heartbeat.active = msg.active;
 
     RCLCPP_DEBUG(this->get_logger(),
                  "Received heartbeat from: '%s', tick: %u, active: %d",
@@ -247,11 +270,19 @@ void MissionControl::heartbeat_timer_callback() {
 
         if (hp.received == false) {
             err_flag = true;
-            RCLCPP_FATAL(
+            RCLCPP_ERROR(
                 this->get_logger(),
                 "MissionControl::heartbeat_timer_callback: No heartbeat "
                 "from '%s' received!",
                 nm.first.c_str());
+        }
+
+        if (nm.second.is_fcc_bridge && !nm.second.hb_payload.active) {
+            err_flag = true;
+            RCLCPP_ERROR(this->get_logger(),
+                         "MissionControl::heartbeat_timer_callback: Node '%s' "
+                         "is not active but this is required for the mission!",
+                         nm.first.c_str());
         }
 
         hp.received = false;
@@ -267,10 +298,62 @@ void MissionControl::heartbeat_timer_callback() {
         if (get_mission_state() != selfcheck &&
             get_mission_state() != prepare_mission) {
             mission_abort(
-                "Missing heartbeat while not in 'selfcheck' or "
-                "'prepare_mission' state");
+                "Missing heartbeat or FCC bridge not active while not in "
+                "'selfcheck' or 'prepare_mission' state");
         }
     }
+}
+
+/**
+ * @brief Callback function for receiving GPS position messages.
+ *
+ * This function is called when a GPS position message is received. It logs the
+ * received position information and performs checks on the timestamp of the
+ * message. If the timestamp is too old, it resets the current position and
+ * takes appropriate actions based on the node's active state. The function also
+ * stores the received position values in the `current_position` object.
+ *
+ * @param msg The GPS position message received.
+ */
+void MissionControl::position_callback(
+    const interfaces::msg::GPSPosition &msg) {
+    RCLCPP_DEBUG(this->get_logger(),
+                 "WaypointNode::callback_position: Received position from "
+                 "'%s': lat: %f, lon: %f, height: %f",
+                 msg.sender_id.c_str(), msg.latitude_deg, msg.longitude_deg,
+                 msg.relative_altitude_m);
+
+    // Check timestamp
+    rclcpp::Time timestamp_now = this->now();
+    if (timestamp_now - rclcpp::Time(msg.time_stamp) >
+        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+            max_position_msg_time_difference_ms))) {
+        // Reset current_position as we can no longer reliabely know where we
+        // are
+        current_position = Position();
+
+        if (this->get_active()) {
+            RCLCPP_FATAL(get_logger(),
+                         "WaypointNode::callback_position: Received too old "
+                         "timestamp in position message: %s. Aborting Job.",
+                         msg.sender_id.c_str());
+            mission_abort(
+                "A too old timestamp was received in a position message while "
+                "being active");
+        } else {
+            // Warn but still store values
+            RCLCPP_WARN(get_logger(),
+                        "WaypointNode::callback_position: Received too old "
+                        "timestamp in position message: %s",
+                        msg.sender_id.c_str());
+        }
+    }
+
+    // Store values
+    current_position.values_set = true;
+    current_position.coordinate_lat = msg.latitude_deg;
+    current_position.coordinate_lon = msg.longitude_deg;
+    current_position.height_cm = msg.relative_altitude_m * 100.0;
 }
 
 /**
@@ -307,4 +390,98 @@ void MissionControl::mission_progress_callback(
 
     // Store value
     mission_progress = msg.progress;
+}
+
+void MissionControl::flight_state_callback(
+    const interfaces::msg::FlightState &msg) {
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::flight_state_callback: Received flight "
+                 "state from '%s': %u",
+                 msg.sender_id.c_str(), msg.flight_mode);
+
+    // Check timestamp
+    rclcpp::Time timestamp_now = this->now();
+    if (timestamp_now - rclcpp::Time(msg.time_stamp) >
+        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+            max_flight_state_msg_time_difference_ms))) {
+        // Warn and ignore message
+        RCLCPP_WARN(
+            get_logger(),
+            "MissionControl::flight_state_callback: Received too "
+            "old timestamp in flight state message: %s, %u. Ignoring message.",
+            msg.sender_id.c_str(), msg.flight_mode);
+
+        return;
+    }
+
+    // Store value
+    current_flight_mode = msg.flight_mode;
+}
+
+void MissionControl::health_callback(const interfaces::msg::UAVHealth &msg) {
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::health_callback: Received flight "
+                 "state from '%s': GYRO: %d, ACCEL: %d, MAGN: %d, LOCALPOS: "
+                 "%d, GLOBALPOS: %d, HOMEPOS: %d, ARMABLE: %d",
+                 msg.sender_id.c_str(), msg.is_gyrometer_calibration_ok,
+                 msg.is_accelerometer_calibration_ok,
+                 msg.is_magnetometer_calibration_ok, msg.is_local_position_ok,
+                 msg.is_global_position_ok, msg.is_home_position_ok,
+                 msg.is_armable);
+
+    // Check timestamp
+    rclcpp::Time timestamp_now = this->now();
+    if (timestamp_now - rclcpp::Time(msg.time_stamp) >
+        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+            max_health_msg_time_difference_ms))) {
+        // Warn and ignore message
+        RCLCPP_WARN(
+            get_logger(),
+            "MissionControl::health_callback: Received too "
+            "old timestamp in flight state message: %s. Ignoring message.",
+            msg.sender_id.c_str());
+
+        return;
+    }
+
+    // Store value
+    drone_health_ok = msg.is_gyrometer_calibration_ok &&
+                      msg.is_accelerometer_calibration_ok &&
+                      msg.is_magnetometer_calibration_ok &&
+                      msg.is_local_position_ok && msg.is_global_position_ok &&
+                      msg.is_home_position_ok && msg.is_armable;
+
+    // Check that drone health is still good
+    if (!drone_health_ok && get_mission_state() != selfcheck &&
+        get_mission_state() != prepare_mission) {
+        RCLCPP_WARN(
+            get_logger(),
+            "MissionControl::health_callback: Health is no longer good: "
+            "GYRO: %d, ACCEL: %d, MAGN: %d, LOCALPOS: "
+            "%d, GLOBALPOS: %d, HOMEPOS: %d, ARMABLE: %d",
+            msg.is_gyrometer_calibration_ok,
+            msg.is_accelerometer_calibration_ok,
+            msg.is_magnetometer_calibration_ok, msg.is_local_position_ok,
+            msg.is_global_position_ok, msg.is_home_position_ok, msg.is_armable);
+
+        mission_abort(
+            "MissionControl::health_callback: Health is no longer good: "
+            "GYRO: " +
+            std::to_string(msg.is_gyrometer_calibration_ok) +
+            ", ACCEL: " + std::to_string(msg.is_accelerometer_calibration_ok) +
+            ", MAGN: " + std::to_string(msg.is_magnetometer_calibration_ok) +
+            ", LOCALPOS: " + std::to_string(msg.is_local_position_ok) +
+            ", GLOBALPOS: " + std::to_string(msg.is_global_position_ok) +
+            ", HOMEPOS: " + std::to_string(msg.is_home_position_ok) +
+            ", ARMABLE: " + std::to_string(msg.is_armable));
+    }
+}
+
+void MissionControl::callback_wait_time() {
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::callback_wait_time: Finished wait time");
+
+    wait_time_timer->cancel();
+
+    wait_time_finished_ok = true;
 }

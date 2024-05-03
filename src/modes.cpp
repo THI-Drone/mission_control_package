@@ -34,29 +34,76 @@ void MissionControl::initiate_takeoff() {
         RCLCPP_INFO(this->get_logger(),
                     "MissionControl::initiate_takeoff: Takeoff initated");
 
+        // Activate Mission Control
+        send_control_json(this->get_name(), true, {});
         this->activate();
         set_active_node_id(this->get_name());
 
-        // TODO check if drone is in the air -> abort if false
+        // Check that drone is in 'READY' state
+        if (current_flight_mode != interfaces::msg::FlightState::READY) {
+            RCLCPP_FATAL(this->get_logger(),
+                         "MissionControl::initiate_takeoff: Drone is not in "
+                         "'READY' flight mode. Current flight mode: %u",
+                         current_flight_mode);
 
-        // TODO save takeoff coordinates
+            mission_abort(
+                "MissionControl::initiate_takeoff: Drone is not in 'READY' "
+                "flight mode. Current flight mode: " +
+                std::to_string(current_flight_mode));
+        }
 
-        // TODO initiate takeoff
+        // Check that the current position is known
+        if (!current_position.values_set) {
+            RCLCPP_FATAL(this->get_logger(),
+                         "MissionControl::initiate_takeoff: Cannot takeoff "
+                         "without a valid position");
+
+            mission_abort(
+                "MissionControl::initiate_takeoff: Cannot takeoff without a "
+                "valid position");
+        }
+
+        home_position = current_position;
+
+        // Wait for a predefined time before sending waypoint command to avoid
+        // confusion
+        init_wait(wait_time_between_msgs);
     }
 
-    // TODO monitor takeoff
+    if (wait_time_finished()) {
+        // Send takeoff command
+        interfaces::msg::Waypoint waypoint_msg;
+        waypoint_msg.latitude_deg = current_position.coordinate_lat;
+        waypoint_msg.longitude_deg = current_position.coordinate_lon;
+        waypoint_msg.relative_altitude_m = 2.0;  // Takeoff to a height of 2 m
 
-    // If takeoff finished
-    RCLCPP_INFO(this->get_logger(),
-                "MissionControl::initiate_takeoff: Takeoff finished");
+        interfaces::msg::UAVCommand msg;
+        msg.sender_id = this->get_name();
+        msg.time_stamp = this->now();
+        msg.speed_m_s = mission_definition_reader.get_safety_settings()
+                            .max_vertical_speed_mps;
+        msg.waypoint = waypoint_msg;
+        msg.type = interfaces::msg::UAVCommand::TAKE_OFF;
 
-    this->deactivate();
-    clear_active_node_id();
+        uav_command_publisher->publish(msg);
 
-    set_mission_state(decision_maker);
-    RCLCPP_INFO(
-        this->get_logger(),
-        "MissionControl::initiate_takeoff: make_decision state activated");
+        RCLCPP_DEBUG(this->get_logger(),
+                     "MissionControl::initiate_takeoff: Takeoff command sent");
+    }
+
+    if (current_mission_finished()) {
+        // Takeoff finished
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::initiate_takeoff: Takeoff finished");
+
+        this->deactivate();
+        clear_active_node_id();
+
+        set_mission_state(decision_maker);
+        RCLCPP_INFO(
+            this->get_logger(),
+            "MissionControl::initiate_takeoff: make_decision state activated");
+    }
 }
 
 /**
@@ -205,8 +252,6 @@ void MissionControl::mode_self_check() {
                     "MissionControl::mode_self_check: Self check started");
         set_standby_config();
         i = 0;
-
-        // TODO implement waiting for good GPS signal
     }
 
     const uint32_t max_wait_time = (30 * 1000) / event_loop_time_delta_ms;
@@ -231,7 +276,14 @@ void MissionControl::mode_self_check() {
             "timeframe");
     }
 
-    if (heartbeat_received_all) {
+    // Check that all heartbeats were received, drone health is good, and FCC is
+    // in 'READY' state
+    if (heartbeat_received_all && drone_health_ok &&
+        current_flight_mode == interfaces::msg::FlightState::READY) {
+        // TODO check if drone is in geofence
+
+        // TODO send safety settings to FCC bridge
+
         RCLCPP_INFO(this->get_logger(),
                     "MissionControl::mode_self_check: Self check finished");
         set_mission_state(check_drone_configuration);

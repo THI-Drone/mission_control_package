@@ -241,6 +241,8 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                             common_lib::CommandDefinitions::get_definition(
                                 marker_type);
 
+                    // TODO check for waypoint that is inside of geofence
+
                     common_lib::CommandDefinitions::parse_check_json(
                         json_marker_data, definition);
                 }

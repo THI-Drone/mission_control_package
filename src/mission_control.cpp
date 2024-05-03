@@ -4,15 +4,20 @@ using std::placeholders::_1;
 
 MissionControl::MissionControl() : CommonNode("mission_control") {
     // Register nodes
-    const std::string node_names[] = {"telemetry_node", "waypoint_node"};
+    const std::string node_names[] = {"telemetry_node", "waypoint_node",
+                                      "fcc_bridge"};
 
     for (const std::string &name : node_names) {
         node_map[name] = ros_node();
     }
 
-    // Allowing waypoint_node to start the mission
-    node_map["waypoint_node"].can_start_mission =
-        true;  // TODO change with real node_id
+    // Allowing fcc_bridge to start the mission
+    // TODO change with real node_id
+    node_map["fcc_bridge"].can_start_mission = true;
+
+    // Setting fcc flag for fcc_bridge
+    // TODO change with real node_id
+    node_map["fcc_bridge"].is_fcc_bridge = true;
 
     // Initialize Heartbeat
     heartbeat_subscription =
@@ -38,6 +43,34 @@ MissionControl::MissionControl() : CommonNode("mission_control") {
     mission_finished_publisher =
         this->create_publisher<interfaces::msg::MissionFinished>(
             "mission_finished", 10);
+
+    // UAV Command Publisher
+    uav_waypoint_command_publisher =
+        this->create_publisher<interfaces::msg::UAVWaypointCommand>(
+            "uav_waypoint_command", 10);
+
+    uav_command_publisher =
+        this->create_publisher<interfaces::msg::UAVCommand>("uav_command", 10);
+
+    // FCC Bridge subscribes
+    mission_progress_subscription =
+        this->create_subscription<interfaces::msg::MissionProgress>(
+            "uav_mission_progress", 10,
+            std::bind(&MissionControl::mission_progress_callback, this, _1));
+
+    position_subscription =
+        this->create_subscription<interfaces::msg::GPSPosition>(
+            "uav_gps_position", 10,
+            std::bind(&MissionControl::position_callback, this, _1));
+
+    flight_state_subscription =
+        this->create_subscription<interfaces::msg::FlightState>(
+            "uav_flight_state", 10,
+            std::bind(&MissionControl::flight_state_callback, this, _1));
+
+    health_subscription = this->create_subscription<interfaces::msg::UAVHealth>(
+        "uav_health", 10,
+        std::bind(&MissionControl::health_callback, this, _1));
 
     // Control Publisher
     control_publisher =
@@ -110,6 +143,8 @@ void MissionControl::event_loop() {
  * ID and the control message is set as inactive, the function clears the active
  * node ID.
  *
+ * @note Resets `mission_progress` to 0
+ *
  * @param target_id The ID of the target node.
  * @param active Whether the control message is active or inactive.
  * @param payload The payload of the control message.
@@ -134,6 +169,9 @@ void MissionControl::send_control(const std::string &target_id,
                  target_id.c_str(), active, payload.c_str());
 
     control_publisher->publish(msg);
+
+    // Reset mission progress
+    mission_progress = 0.0;
 }
 
 /**

@@ -16,16 +16,19 @@
 #include "rclcpp/rclcpp.hpp"
 #include "structs.hpp"
 
-
 // Message includes
 #include "interfaces/msg/control.hpp"
+#include "interfaces/msg/flight_state.hpp"
+#include "interfaces/msg/gps_position.hpp"
 #include "interfaces/msg/heartbeat.hpp"
 #include "interfaces/msg/job_finished.hpp"
 #include "interfaces/msg/mission_finished.hpp"
 #include "interfaces/msg/mission_progress.hpp"
 #include "interfaces/msg/mission_start.hpp"
+#include "interfaces/msg/uav_health.hpp"
 #include "interfaces/msg/uav_waypoint_command.hpp"
-
+#include "interfaces/msg/waypoint.hpp"
+#include "interfaces/msg/uav_command.hpp"
 
 /**
  * @brief Enumeration representing the different states of a mission.
@@ -72,6 +75,24 @@ class MissionControl : public common_lib::CommonNode {
         commands;  //!< Storage for current commands that
                    //!< will be executed one by one
 
+    Position home_position;     //!< Storage for takeoff position
+    Position current_position;  //!< Current position of the drone
+
+    uint8_t current_flight_mode =
+        interfaces::msg::FlightState::UNKNOWN;  //!< Current flight mode of the
+                                                //!< drone as published in
+                                                //!< FlightState
+
+    bool drone_health_ok =
+        false;  //!< True if all of the health indicators in the UAVHealth.msg
+                //!< are ok, otherwise false
+
+    // Wait Time
+    static constexpr uint16_t wait_time_between_msgs =
+        50;  //!< Wait time between messages in ms to avoid confusion
+    bool wait_time_finished_ok = false; //!< True if wait time finished, otherwise false
+    rclcpp::TimerBase::SharedPtr wait_time_timer;
+
     // Mission Definition File
     mission_file_lib::MissionDefinitionReader mission_definition_reader;
     std::unordered_set<std::string> executed_marker_names;
@@ -88,6 +109,10 @@ class MissionControl : public common_lib::CommonNode {
     // Job finished
     rclcpp::Subscription<interfaces::msg::JobFinished>::SharedPtr
         job_finished_subscription;
+
+    // Waypoint Publisher
+    rclcpp::Publisher<interfaces::msg::UAVWaypointCommand>::SharedPtr uav_waypoint_command_publisher;
+    rclcpp::Publisher<interfaces::msg::UAVCommand>::SharedPtr uav_command_publisher;
 
     // Control
     rclcpp::Publisher<interfaces::msg::Control>::SharedPtr control_publisher;
@@ -118,8 +143,27 @@ class MissionControl : public common_lib::CommonNode {
         heartbeat_subscription;
 
     // FCC Bridge callbacks
+    static constexpr uint16_t max_position_msg_time_difference_ms =
+        100;  //!< Maximum age of a position message from FCC bridge
+
     static constexpr uint16_t max_progress_msg_time_difference_ms =
         500;  //!< Maximum age of a progress message from FCC bridge
+
+    static constexpr uint16_t max_flight_state_msg_time_difference_ms =
+        200;  //!< Maximum age of a flight state message from FCC bridge
+
+    static constexpr uint16_t max_health_msg_time_difference_ms =
+        500;  //!< Maximum age of a health message from FCC bridge
+
+    // FCC Bridge callbacks
+    rclcpp::Subscription<interfaces::msg::GPSPosition>::SharedPtr
+        position_subscription;
+    rclcpp::Subscription<interfaces::msg::MissionProgress>::SharedPtr
+        mission_progress_subscription;
+    rclcpp::Subscription<interfaces::msg::FlightState>::SharedPtr
+        flight_state_subscription;
+    rclcpp::Subscription<interfaces::msg::UAVHealth>::SharedPtr
+        health_subscription;
 
    public:
     MissionControl();
@@ -135,6 +179,14 @@ class MissionControl : public common_lib::CommonNode {
     bool get_state_first_loop();
     bool get_job_finished_successfully();
     nlohmann::json get_job_finished_payload();
+
+    // Wait time
+    void init_wait(uint16_t wait_time_ms);
+    bool wait_time_finished();
+    void callback_wait_time();
+
+    // Mission Progress
+    bool current_mission_finished();
 
     // Active Node
     void set_active_node_id(std::string node_id);
@@ -189,5 +241,8 @@ class MissionControl : public common_lib::CommonNode {
     void heartbeat_timer_callback();
 
     // FCC Bridge callbacks
+    void position_callback(const interfaces::msg::GPSPosition &msg);
     void mission_progress_callback(const interfaces::msg::MissionProgress &msg);
+    void flight_state_callback(const interfaces::msg::FlightState &msg);
+    void health_callback(const interfaces::msg::UAVHealth &msg);
 };

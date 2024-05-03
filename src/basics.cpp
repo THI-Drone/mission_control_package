@@ -129,3 +129,40 @@ nlohmann::json MissionControl::get_job_finished_payload() {
 
     return res;
 }
+
+/**
+ * Checks if the current mission is finished.
+ *
+ * @return true if the mission is finished, false otherwise.
+ */
+bool MissionControl::current_mission_finished() {
+    if (mission_progress >= 1.0) {
+        mission_progress = 0.0;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+void MissionControl::init_wait(uint16_t wait_time_ms) {
+    wait_time_finished_ok = false;
+
+    // Initialize Wait Time Timer
+    wait_time_timer = this->create_wall_timer(
+        std::chrono::milliseconds(wait_time_ms),
+        std::bind(&MissionControl::callback_wait_time, this));
+
+    RCLCPP_DEBUG(
+        this->get_logger(),
+        "MissionControl::callback_wait_time: Started wait time for %u ms",
+        wait_time_ms);
+}
+
+bool MissionControl::wait_time_finished() {
+    if (wait_time_finished_ok) {
+        wait_time_finished_ok = false;
+        return true;
+    } else {
+        return false;
+    }
+}
