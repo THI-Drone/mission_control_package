@@ -142,8 +142,6 @@ void MissionControl::mode_decision_maker() {
         set_mission_state(fly_to_waypoint);
     else if (current_command_type == "detect_marker")
         set_mission_state(detect_marker);
-    else if (current_command_type == "drop_payload")
-        set_mission_state(drop_payload);
     else if (current_command_type == "end_mission")
         mission_finished();
     else
