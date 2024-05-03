@@ -144,6 +144,17 @@ bool MissionControl::current_mission_finished() {
     }
 }
 
+/**
+ * @brief Initializes the wait time timer.
+ * 
+ * This function initializes the wait time timer with the specified wait time in milliseconds.
+ * It creates a wall timer that calls the callback function MissionControl::callback_wait_time
+ * after the specified wait time has elapsed.
+ * 
+ * @note Poll `wait_time_finished` to continue after the wait time is over
+ * 
+ * @param wait_time_ms The wait time in milliseconds.
+ */
 void MissionControl::init_wait(uint16_t wait_time_ms) {
     wait_time_finished_ok = false;
 
@@ -158,6 +169,11 @@ void MissionControl::init_wait(uint16_t wait_time_ms) {
         wait_time_ms);
 }
 
+/**
+ * Checks if the wait time has finished.
+ * 
+ * @return true if the wait time has finished, false otherwise.
+ */
 bool MissionControl::wait_time_finished() {
     if (wait_time_finished_ok) {
         wait_time_finished_ok = false;

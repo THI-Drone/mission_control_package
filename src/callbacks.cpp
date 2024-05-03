@@ -156,7 +156,9 @@ void MissionControl::check_control(
  * - Checks if the sender of the heartbeat message is registered in the node
  * map. If not, it logs an error and returns.
  * - Checks if the active state of the sender matches the internal state. If
- * not, it logs a fatal error and aborts the mission.
+ * not, it logs a fatal error and aborts the mission. Exception: FCC Bridge
+ * which must always be active when not in `selfcheck` or `prepare_mission`
+ * state.
  * - Checks the tick value of the heartbeat message. If it is invalid or has
  * already been received, it logs an error and returns.
  * - Checks that the received timestamp is not older than 10ms. If it is too
@@ -418,6 +420,15 @@ void MissionControl::flight_state_callback(
     current_flight_mode = msg.flight_mode;
 }
 
+/**
+ * @brief Callback function for receiving UAV health messages.
+ *
+ * This function is called when a UAV health message is received. It checks the
+ * timestamp of the message and stores the health status of the drone. If the
+ * drone health is no longer good, it logs a warning and aborts the mission.
+ *
+ * @param msg The UAV health message received.
+ */
 void MissionControl::health_callback(const interfaces::msg::UAVHealth &msg) {
     RCLCPP_DEBUG(this->get_logger(),
                  "MissionControl::health_callback: Received flight "
@@ -477,6 +488,12 @@ void MissionControl::health_callback(const interfaces::msg::UAVHealth &msg) {
     }
 }
 
+/**
+ * @brief Callback function for wait time completion.
+ *
+ * This function is called when the wait time is finished. It cancels the wait
+ * time timer and sets the `wait_time_finished_ok` flag to true.
+ */
 void MissionControl::callback_wait_time() {
     RCLCPP_DEBUG(this->get_logger(),
                  "MissionControl::callback_wait_time: Finished wait time");
