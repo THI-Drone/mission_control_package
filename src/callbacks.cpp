@@ -381,13 +381,11 @@ void MissionControl::mission_progress_callback(
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             max_progress_msg_time_difference_ms))) {
-        // Warn and ignore message
+        // Warn
         RCLCPP_WARN(get_logger(),
                     "MissionControl::mission_progress_callback: Received too "
-                    "old timestamp in progress message: %s. Ignoring message.",
+                    "old timestamp in progress message: %s.",
                     msg.sender_id.c_str());
-
-        return;
     }
 
     // Store value
