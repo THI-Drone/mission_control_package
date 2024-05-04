@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+#include <stdexcept>
 #include <string>
 
 /**
@@ -8,7 +10,7 @@
 struct heartbeat_payload {
     bool received; /**< Flag indicating if the payload has been received. */
     uint32_t tick; /**< The tick value of the payload. */
-    bool active; /**< The active state of the payload. */
+    bool active;   /**< The active state of the payload. */
 
     /**
      * @brief Default constructor for heartbeat_payload.
@@ -43,4 +45,20 @@ struct Position {
     double coordinate_lat;
     double coordinate_lon;
     uint32_t height_cm;
+
+    /**
+     * @brief Get the position as an array of doubles.
+     *
+     * @return std::array<double, 2> The position array containing latitude and
+     * longitude.
+     * @throws std::runtime_error if the values are not set.
+     */
+    std::array<double, 2> get_position_array() const {
+        // Check that values are set
+        if (!values_set)
+            throw std::runtime_error(
+                "Position::get_position_array: values are not set");
+
+        return {coordinate_lat, coordinate_lon};
+    }
 };

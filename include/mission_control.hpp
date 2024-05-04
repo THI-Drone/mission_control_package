@@ -7,28 +7,34 @@
 #include <map>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <stdexcept>
 #include <unordered_set>
 #include <vector>
 
 #include "common_package/common_node.hpp"
+#include "common_package/topic_names.hpp"
 #include "event_loop_guard.hpp"
 #include "mission_definition_file.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "structs.hpp"
 
+
 // Message includes
 #include "interfaces/msg/control.hpp"
+#include "interfaces/msg/flight_mode.hpp"
 #include "interfaces/msg/flight_state.hpp"
 #include "interfaces/msg/gps_position.hpp"
 #include "interfaces/msg/heartbeat.hpp"
 #include "interfaces/msg/job_finished.hpp"
+#include "interfaces/msg/landed_state.hpp"
 #include "interfaces/msg/mission_finished.hpp"
 #include "interfaces/msg/mission_progress.hpp"
 #include "interfaces/msg/mission_start.hpp"
+#include "interfaces/msg/uav_command.hpp"
 #include "interfaces/msg/uav_health.hpp"
 #include "interfaces/msg/uav_waypoint_command.hpp"
 #include "interfaces/msg/waypoint.hpp"
-#include "interfaces/msg/uav_command.hpp"
+#include "interfaces/msg/safety_limits.hpp"
 
 /**
  * @brief Enumeration representing the different states of a mission.
@@ -79,7 +85,12 @@ class MissionControl : public common_lib::CommonNode {
     Position current_position;  //!< Current position of the drone
 
     uint8_t current_flight_mode =
-        interfaces::msg::FlightState::UNKNOWN;  //!< Current flight mode of the
+        interfaces::msg::FlightMode::UNKNOWN;  //!< Current flight mode of the
+                                               //!< drone as published in
+                                               //!< FlightState
+
+    uint8_t current_landed_state =
+        interfaces::msg::LandedState::UNKNOWN;  //!< Current landed state of the
                                                 //!< drone as published in
                                                 //!< FlightState
 
@@ -90,7 +101,8 @@ class MissionControl : public common_lib::CommonNode {
     // Wait Time
     static constexpr uint16_t wait_time_between_msgs =
         50;  //!< Wait time between messages in ms to avoid confusion
-    bool wait_time_finished_ok = false; //!< True if wait time finished, otherwise false
+    bool wait_time_finished_ok =
+        false;  //!< True if wait time finished, otherwise false
     rclcpp::TimerBase::SharedPtr wait_time_timer;
 
     // Mission Definition File
@@ -111,8 +123,13 @@ class MissionControl : public common_lib::CommonNode {
         job_finished_subscription;
 
     // Waypoint Publisher
-    rclcpp::Publisher<interfaces::msg::UAVWaypointCommand>::SharedPtr uav_waypoint_command_publisher;
-    rclcpp::Publisher<interfaces::msg::UAVCommand>::SharedPtr uav_command_publisher;
+    rclcpp::Publisher<interfaces::msg::UAVWaypointCommand>::SharedPtr
+        uav_waypoint_command_publisher;
+    rclcpp::Publisher<interfaces::msg::UAVCommand>::SharedPtr
+        uav_command_publisher;
+
+    // Safety Publisher
+    rclcpp::Publisher<interfaces::msg::SafetyLimits>::SharedPtr safety_limits_publisher;
 
     // Control
     rclcpp::Publisher<interfaces::msg::Control>::SharedPtr control_publisher;

@@ -84,7 +84,10 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                             common_lib::MAX_HORIZONTAL_SPEED_MPS}},
                           {"max_vertical_speed_mps",
                            {false, common_lib::number, 0.0,
-                            common_lib::MAX_VERTICAL_SPEED_MPS}}};
+                            common_lib::MAX_VERTICAL_SPEED_MPS}},
+                          {"min_soc_percent",
+                           {false, common_lib::number_unsigned,
+                            common_lib::MIN_SOC_PERCENT, 99}}};
 
         common_lib::CommandDefinitions::parse_check_json(safety_json,
                                                          definition);
@@ -325,6 +328,9 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
     if (safety_json.contains("max_vertical_speed_mps"))
         safety_settings.max_vertical_speed_mps =
             safety_json.at("max_vertical_speed_mps");
+    if (safety_json.contains("min_soc_percent"))
+        safety_settings.min_soc_percent =
+            safety_json.at("min_soc_percent");
 
     // Store marker details
     for (const auto &[marker_name, marker_content] : markers_json.items()) {

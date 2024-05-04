@@ -44,6 +44,10 @@ struct safety {
         common_lib::MAX_VERTICAL_SPEED_MPS;  //!< Maximum vertical speed in
                                              //!< meters per second
 
+    uint8_t min_soc_percent =
+        common_lib::MIN_SOC_PERCENT;  //!< Minimum SOC after which a RTH is
+                                      //!< triggered
+
     /**
      * @brief Get the geofence points.
      *
@@ -155,5 +159,17 @@ class MissionDefinitionReader {
      */
     std::vector<command> get_marker_commands(
         const std::string &marker_name) const;
+
+    /**
+     * Checks if a given point is inside the geofence.
+     *
+     * @note Wrapper for `safety::check_in_geofence`
+     *
+     * @param point The point to be checked.
+     * @return True if the point is inside the geofence, false otherwise.
+     */
+    bool check_in_geofence(const std::array<double, 2> &point) {
+        return safety_settings.check_in_geofence(point);
+    }
 };
 }  // namespace mission_file_lib

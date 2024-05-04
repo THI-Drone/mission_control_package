@@ -21,7 +21,8 @@
       "max_height_cm": 5000,
       "min_cruise_height_cm": 500,
       "max_horizontal_speed_mps": 10.0,
-      "max_vertical_speed_mps": 2.5
+      "max_vertical_speed_mps": 2.5,
+      "min_soc_percent": 30
    },
    "markers": {
       "init": [

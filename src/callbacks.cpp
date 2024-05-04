@@ -396,8 +396,8 @@ void MissionControl::flight_state_callback(
     const interfaces::msg::FlightState &msg) {
     RCLCPP_DEBUG(this->get_logger(),
                  "MissionControl::flight_state_callback: Received flight "
-                 "state from '%s': %u",
-                 msg.sender_id.c_str(), msg.flight_mode);
+                 "state from '%s': mode: %u, landed_state: %u",
+                 msg.sender_id.c_str(), msg.mode.mode, msg.state.state);
 
     // Check timestamp
     rclcpp::Time timestamp_now = this->now();
@@ -408,14 +408,15 @@ void MissionControl::flight_state_callback(
         RCLCPP_WARN(
             get_logger(),
             "MissionControl::flight_state_callback: Received too "
-            "old timestamp in flight state message: %s, %u. Ignoring message.",
-            msg.sender_id.c_str(), msg.flight_mode);
+            "old timestamp in flight state message: %s, mode: %u, landed_state: %u. Ignoring message.",
+            msg.sender_id.c_str(), msg.mode.mode, msg.state.state);
 
         return;
     }
 
     // Store value
-    current_flight_mode = msg.flight_mode;
+    current_flight_mode = msg.mode.mode;
+    current_landed_state = msg.state.state;
 }
 
 /**

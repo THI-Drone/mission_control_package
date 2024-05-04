@@ -39,17 +39,21 @@ void MissionControl::initiate_takeoff() {
         this->activate();
         set_active_node_id(this->get_name());
 
-        // Check that drone is in 'READY' state
-        if (current_flight_mode != interfaces::msg::FlightState::READY) {
+        // Check that drone is in 'READY' state and landed state is 'ON_GROUND'
+        if (current_flight_mode != interfaces::msg::FlightMode::READY ||
+            current_landed_state != interfaces::msg::LandedState::ON_GROUND) {
             RCLCPP_FATAL(this->get_logger(),
                          "MissionControl::initiate_takeoff: Drone is not in "
-                         "'READY' flight mode. Current flight mode: %u",
-                         current_flight_mode);
+                         "'READY' flight mode or not on the ground. Current "
+                         "flight mode: %u, Current landed state: %u",
+                         current_flight_mode, current_landed_state);
 
             mission_abort(
                 "MissionControl::initiate_takeoff: Drone is not in 'READY' "
-                "flight mode. Current flight mode: " +
-                std::to_string(current_flight_mode));
+                "flight mode or not on the ground. Current flight mode: " +
+                std::to_string(current_flight_mode) +
+                ", Current landed state: " +
+                std::to_string(current_landed_state));
         }
 
         // Check that the current position is known
@@ -276,13 +280,40 @@ void MissionControl::mode_self_check() {
             "timeframe");
     }
 
-    // Check that all heartbeats were received, drone health is good, and FCC is
-    // in 'READY' state
+    // Check that all heartbeats were received, drone health is good and drone
+    // is on ground
     if (heartbeat_received_all && drone_health_ok &&
-        current_flight_mode == interfaces::msg::FlightState::READY) {
-        // TODO check if drone is in geofence
+        current_landed_state == interfaces::msg::LandedState::ON_GROUND) {
+        {
+            // Send safety settings to FCC bridge
+            mission_file_lib::safety safety_settings =
+                mission_definition_reader.get_safety_settings();
 
-        // TODO send safety settings to FCC bridge
+            interfaces::msg::SafetyLimits msg;
+            msg.time_stamp = this->now();
+            msg.sender_id = this->get_name();
+            msg.max_speed_m_s =
+                std::max(safety_settings.max_horizontal_speed_mps,
+                         safety_settings.max_vertical_speed_mps);
+            msg.max_height_m = safety_settings.max_height_cm / 100.0;
+            msg.min_soc = safety_settings.min_soc_percent;
+
+            std::vector<interfaces::msg::Waypoint> geofence_points;
+
+            for (const auto &p : safety_settings.get_geofence_points()) {
+                interfaces::msg::Waypoint geofence_point;
+                geofence_point.latitude_deg = p.at(0);
+                geofence_point.longitude_deg = p.at(1);
+                geofence_point.relative_altitude_m =
+                    interfaces::msg::Waypoint::INVALID_ALTITUDE;
+
+                geofence_points.push_back(geofence_point);
+            }
+
+            msg.geofence_points = geofence_points;
+
+            safety_limits_publisher->publish(msg);
+        }
 
         RCLCPP_INFO(this->get_logger(),
                     "MissionControl::mode_self_check: Self check finished");
@@ -306,17 +337,31 @@ void MissionControl::mode_check_drone_configuration() {
                     "MissionControl::mode_check_drone_configuration: Check "
                     "drone configuration started");
         set_standby_config();
-
-        // TODO implement check if position is inside of geofence
-
-        // TODO implement check that drone is on the ground
     }
 
-    RCLCPP_INFO(this->get_logger(),
-                "MissionControl::mode_check_drone_configuration: Check drone "
-                "configuration finished");
-    set_mission_state(armed);
-    RCLCPP_INFO(this->get_logger(),
-                "MissionControl::mode_check_drone_configuration: Mission "
-                "Control armed");
+    // Check that FCC is in 'READY' state and drone is on ground
+    if (current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
+        current_flight_mode == interfaces::msg::FlightMode::READY) {
+        // Check that current position is in geofence
+        if (!mission_definition_reader.check_in_geofence(
+                current_position.get_position_array())) {
+            RCLCPP_FATAL(this->get_logger(),
+                         "MissionControl::mode_check_drone_configuration: "
+                         "Drone is outside of geofence. Can't arm.");
+
+            mission_abort(
+                "MissionControl::mode_check_drone_configuration: Drone is "
+                "outside of geofence. Can't arm.");
+        }
+
+        // All checks finished, go to 'armed' state
+        RCLCPP_INFO(
+            this->get_logger(),
+            "MissionControl::mode_check_drone_configuration: Check drone "
+            "configuration finished");
+        set_mission_state(armed);
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::mode_check_drone_configuration: Mission "
+                    "Control armed");
+    }
 }

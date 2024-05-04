@@ -22,7 +22,7 @@ MissionControl::MissionControl() : CommonNode("mission_control") {
     // Initialize Heartbeat
     heartbeat_subscription =
         this->create_subscription<interfaces::msg::Heartbeat>(
-            "heartbeat", 1,
+            common_lib::topic_names::Heartbeat, 1,
             std::bind(&MissionControl::heartbeat_callback, this, _1));
     heartbeat_timer = this->create_wall_timer(
         1000ms, std::bind(&MissionControl::heartbeat_timer_callback, this));
@@ -30,56 +30,60 @@ MissionControl::MissionControl() : CommonNode("mission_control") {
     // Init Job_Finished
     job_finished_subscription =
         this->create_subscription<interfaces::msg::JobFinished>(
-            "job_finished", 10,
+            common_lib::topic_names::JobFinished, 10,
             std::bind(&MissionControl::job_finished_callback, this, _1));
 
     // Mission Start
     mission_start_subscription =
         this->create_subscription<interfaces::msg::MissionStart>(
-            "mission_start", 10,
+            common_lib::topic_names::MissionStart, 10,
             std::bind(&MissionControl::mission_start, this, _1));
 
     // Mission Finished
     mission_finished_publisher =
         this->create_publisher<interfaces::msg::MissionFinished>(
-            "mission_finished", 10);
+            common_lib::topic_names::MissionFinished, 10);
 
     // UAV Command Publisher
     uav_waypoint_command_publisher =
         this->create_publisher<interfaces::msg::UAVWaypointCommand>(
-            "uav_waypoint_command", 10);
+            common_lib::topic_names::UAVWaypointCommand, 10);
 
-    uav_command_publisher =
-        this->create_publisher<interfaces::msg::UAVCommand>("uav_command", 10);
+    uav_command_publisher = this->create_publisher<interfaces::msg::UAVCommand>(
+        common_lib::topic_names::UAVCommand, 10);
 
     // FCC Bridge subscribes
     mission_progress_subscription =
         this->create_subscription<interfaces::msg::MissionProgress>(
-            "uav_mission_progress", 10,
+            common_lib::topic_names::MissionProgress, 10,
             std::bind(&MissionControl::mission_progress_callback, this, _1));
 
     position_subscription =
         this->create_subscription<interfaces::msg::GPSPosition>(
-            "uav_gps_position", 10,
+            common_lib::topic_names::GPSPosition, 10,
             std::bind(&MissionControl::position_callback, this, _1));
 
     flight_state_subscription =
         this->create_subscription<interfaces::msg::FlightState>(
-            "uav_flight_state", 10,
+            common_lib::topic_names::FlightState, 10,
             std::bind(&MissionControl::flight_state_callback, this, _1));
 
     health_subscription = this->create_subscription<interfaces::msg::UAVHealth>(
-        "uav_health", 10,
+        common_lib::topic_names::UAVHealth, 10,
         std::bind(&MissionControl::health_callback, this, _1));
 
     // Control Publisher
-    control_publisher =
-        this->create_publisher<interfaces::msg::Control>("control", 10);
+    control_publisher = this->create_publisher<interfaces::msg::Control>(
+        common_lib::topic_names::Control, 10);
+
+    // Safety Limits Publisher
+    safety_limits_publisher = this->create_publisher<interfaces::msg::SafetyLimits>(
+        common_lib::topic_names::SafetyLimits, 10);
 
     // Fail-Safe checks
     control_subscription =
         this->create_subscription<interfaces::msg::UAVWaypointCommand>(
-            "uav_waypoint_command", 10,
+            common_lib::topic_names::UAVWaypointCommand, 10,
             std::bind(&MissionControl::check_control, this, _1));
 
     // Initialize Event Loop
