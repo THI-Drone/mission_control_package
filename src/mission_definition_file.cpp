@@ -145,10 +145,10 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
             geofence_points.push_back(geofence_point_pair);
         }
 
-        // Checking that at least 2 geofence points are provided
-        if (geofence_points.size() < 2)
+        // Checking that at least 3 geofence points are provided
+        if (geofence_points.size() < 3)
             throw std::runtime_error(
-                "MissionDefinitionReader::read_file: At least 2 points most be "
+                "MissionDefinitionReader::read_file: At least 3 points most be "
                 "provided (currently: " +
                 std::to_string(geofence_points.size()) + ")");
 
