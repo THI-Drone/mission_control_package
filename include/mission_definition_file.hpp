@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -9,23 +10,85 @@
 #include <vector>
 
 #include "common_package/commands.hpp"
+#include "external_libs/geofence.hpp"
 
 namespace mission_file_lib {
 /**
  * @brief Struct representing the safety settings of a mission.
  */
 struct safety {
-    /// Vector of geofence points. Each point is represented by a pair of floats
-    /// (latitude, longitude).
-    std::vector<std::pair<double, double>> geofence_points;
-    /// Maximum flight height in centimeters
-    uint16_t max_height_cm = common_lib::MAX_FLIGHT_HEIGHT_CM;
-    /// Minimum cruise height in centimeters
-    uint16_t min_cruise_height_cm = common_lib::MIN_CRUISE_HEIGHT_CM;
-    /// Maximum horizontal speed in meters per second
-    float max_horizontal_speed_mps = common_lib::MAX_HORIZONTAL_SPEED_MPS;
-    /// Maximum vertical speed in meters per second
-    float max_vertical_speed_mps = common_lib::MAX_VERTICAL_SPEED_MPS;
+   private:
+    std::vector<std::array<double, 2>>
+        geofence_points;  //!< Vector of geofence points. Each point is
+                          //!< represented by an array of floats (latitude,
+                          //!< longitude).
+
+   public:
+    std::vector<std::array<double, 2>>
+        geofence_points_convex_hull;  //!< Calculated convex hull of the
+                                      //!< geofence points
+
+    uint16_t max_height_cm =
+        common_lib::MAX_FLIGHT_HEIGHT_CM;  //!< Maximum flight height in
+                                           //!< centimeters
+
+    uint16_t min_cruise_height_cm =
+        common_lib::MIN_CRUISE_HEIGHT_CM;  //!< Minimum cruise height in
+                                           //!< centimeters
+
+    float max_horizontal_speed_mps =
+        common_lib::MAX_HORIZONTAL_SPEED_MPS;  //!< Maximum horizontal speed in
+                                               //!< meters per second
+
+    float max_vertical_speed_mps =
+        common_lib::MAX_VERTICAL_SPEED_MPS;  //!< Maximum vertical speed in
+                                             //!< meters per second
+
+    /**
+     * @brief Get the geofence points.
+     *
+     * This function returns a vector of arrays containing the geofence points.
+     * Each geofence point is represented by a 2D coordinate (latitude,
+     * longitude).
+     *
+     * @note These are the raw geofence points as defined in the Mission File
+     *
+     * @return std::vector<std::array<double, 2>> The geofence points.
+     */
+    std::vector<std::array<double, 2>> get_geofence_points() const {
+        return geofence_points;
+    }
+
+    /**
+     * @brief Sets the geofence points for the mission.
+     *
+     * This function sets the geofence points for the mission by accepting a
+     * vector of 2D points. The geofence points are used to define a boundary
+     * for the mission area.
+     *
+     * @note The points will be used to calculate a convex hull used for
+     * checking the geofence
+     *
+     * @param points A vector of 2D points representing the geofence points.
+     */
+    void set_geofence_points(const std::vector<std::array<double, 2>> &points) {
+        geofence_points = points;
+
+        geofence_points_convex_hull = geofence::getConvexHull(points);
+    }
+
+    /**
+     * Checks if a given point is inside the geofence.
+     *
+     * @note Make sure the geofence points are set before calling this function
+     *
+     * @param point The point to check, represented as a std::array<double, 2>
+     * containing the lat and lon coordinates.
+     * @return true if the point is inside the geofence, false otherwise.
+     */
+    bool check_in_geofence(const std::array<double, 2> &point) {
+        return geofence::isIn(geofence_points_convex_hull, point);
+    }
 };
 
 /**

@@ -110,7 +110,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
 
         nlohmann::ordered_json geofence_json = safety_json.at("geofence");
 
-        std::vector<std::pair<double, double>> geofence_points;
+        std::vector<std::array<double, 2>> geofence_points;
         for (const auto &[key, geofence_point] : geofence_json.items()) {
             // Loop through all geofence points
 
@@ -127,18 +127,18 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
             common_lib::CommandDefinitions::parse_check_json(
                 geofence_point, geofence_definition);
 
-            std::pair<double, double> geofence_point_pair = {
+            std::array<double, 2> geofence_point_pair = {
                 geofence_point.at("lat"), geofence_point.at("lon")};
 
             // Check that point is unique
             for (const auto &gp : geofence_points) {
-                if (gp.first == geofence_point_pair.first &&
-                    gp.second == geofence_point_pair.second) {
+                if (gp.at(0) == geofence_point_pair.at(0) &&
+                    gp.at(0) == geofence_point_pair.at(1)) {
                     throw std::runtime_error(
                         "MissionDefinitionReader::read_file: Geofence point is "
                         "not unique: LAT: " +
-                        std::to_string(geofence_point_pair.first) +
-                        ", LON: " + std::to_string(geofence_point_pair.second));
+                        std::to_string(geofence_point_pair.at(0)) +
+                        ", LON: " + std::to_string(geofence_point_pair.at(1)));
                 }
             }
 
@@ -152,8 +152,8 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                 "provided (currently: " +
                 std::to_string(geofence_points.size()) + ")");
 
-        // Store geofence points if not a dry run
-        if (!dry_run) safety_settings.geofence_points = geofence_points;
+        // Always store geofence points as they're needed for future checks
+        safety_settings.set_geofence_points(geofence_points);
 
         printf(
             "MissionDefinitionReader::read_file: Geofence points checked "
@@ -241,10 +241,34 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                             common_lib::CommandDefinitions::get_definition(
                                 marker_type);
 
-                    // TODO check for waypoint that is inside of geofence
-
                     common_lib::CommandDefinitions::parse_check_json(
                         json_marker_data, definition);
+
+                    if (marker_type == "waypoint") {
+                        // Check that waypoint is inside of geofence
+
+                        std::array<double, 2> point = {
+                            json_marker_data["target_coordinate_lat"],
+                            json_marker_data["target_coordinate_lon"]};
+
+                        printf(
+                            "MissionDefinitionReader::read_file: Checking that "
+                            "the waypoint is inside of the geofence: lat: %f, "
+                            "lon :%f\n",
+                            point.at(0), point.at(1));
+
+                        if (!safety_settings.check_in_geofence(point)) {
+                            throw std::runtime_error(
+                                "MissionDefinitionReader::read_file: Waypoint "
+                                "not in geofence: lat: " +
+                                std::to_string(point.at(0)) +
+                                ", lon: " + std::to_string(point.at(1)));
+                        }
+
+                        printf(
+                            "MissionDefinitionReader::read_file: Waypoint "
+                            "check successfull\n");
+                    }
                 }
             }
 
