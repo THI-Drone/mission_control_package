@@ -263,7 +263,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                         if (!safety_settings.check_in_geofence(point)) {
                             throw std::runtime_error(
                                 "MissionDefinitionReader::read_file: Waypoint "
-                                "not in geofence: lat: " +
+                                "outside of geofence: lat: " +
                                 std::to_string(point.at(0)) +
                                 ", lon: " + std::to_string(point.at(1)));
                         }
@@ -329,8 +329,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
         safety_settings.max_vertical_speed_mps =
             safety_json.at("max_vertical_speed_mps");
     if (safety_json.contains("min_soc_percent"))
-        safety_settings.min_soc_percent =
-            safety_json.at("min_soc_percent");
+        safety_settings.min_soc_percent = safety_json.at("min_soc_percent");
 
     // Store marker details
     for (const auto &[marker_name, marker_content] : markers_json.items()) {
