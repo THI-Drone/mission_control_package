@@ -22,9 +22,9 @@ include_directories(include)
 #  Mission File Lib
 add_library(mission_file_lib SHARED
   src/mission_definition_file.cpp)
+ament_target_dependencies(mission_file_lib common_package nlohmann_json)
 ament_export_libraries(mission_file_lib)
 ament_export_include_directories(include)
-ament_target_dependencies(mission_file_lib common_package nlohmann_json)
 
 install (
   DIRECTORY include/
