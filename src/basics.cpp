@@ -217,8 +217,9 @@ const char* MissionControl::get_mission_state_str() const {
 }
 
 /**
- * @brief Converts a MissionState_t enum value to its corresponding string representation.
- * 
+ * @brief Converts a MissionState_t enum value to its corresponding string
+ * representation.
+ *
  * @param mission_state The MissionState_t enum value to convert.
  * @return const char* The string representation of the mission state.
  * @throws std::runtime_error if the mission state is unknown.
