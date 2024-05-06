@@ -18,7 +18,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "structs.hpp"
 
-
 // Message includes
 #include "interfaces/msg/control.hpp"
 #include "interfaces/msg/flight_mode.hpp"
@@ -30,11 +29,12 @@
 #include "interfaces/msg/mission_finished.hpp"
 #include "interfaces/msg/mission_progress.hpp"
 #include "interfaces/msg/mission_start.hpp"
+#include "interfaces/msg/safety_limits.hpp"
 #include "interfaces/msg/uav_command.hpp"
 #include "interfaces/msg/uav_health.hpp"
 #include "interfaces/msg/uav_waypoint_command.hpp"
 #include "interfaces/msg/waypoint.hpp"
-#include "interfaces/msg/safety_limits.hpp"
+
 
 /**
  * @brief Enumeration representing the different states of a mission.
@@ -129,7 +129,8 @@ class MissionControl : public common_lib::CommonNode {
         uav_command_publisher;
 
     // Safety Publisher
-    rclcpp::Publisher<interfaces::msg::SafetyLimits>::SharedPtr safety_limits_publisher;
+    rclcpp::Publisher<interfaces::msg::SafetyLimits>::SharedPtr
+        safety_limits_publisher;
 
     // Control
     rclcpp::Publisher<interfaces::msg::Control>::SharedPtr control_publisher;
@@ -193,7 +194,7 @@ class MissionControl : public common_lib::CommonNode {
     void set_standby_config();
     void set_mission_state(const MissionState_t new_mission_state);
     constexpr MissionState_t get_mission_state() const { return mission_state; }
-    const char* get_mission_state_str() const;
+    const char *get_mission_state_str() const;
     bool get_state_first_loop();
     bool get_job_finished_successfully();
     nlohmann::json get_job_finished_payload();
