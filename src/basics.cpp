@@ -1,5 +1,9 @@
 #include "mission_control.hpp"
 
+#define ENUM_TO_STR(member) \
+    case member:            \
+        return #member
+
 /**
  * @brief Sets the standby configuration
  *
@@ -57,7 +61,7 @@ void MissionControl::set_active_node_id(std::string node_id) {
  * @param new_active_marker_name The new active marker name.
  */
 void MissionControl::set_active_marker_name(
-    const std::string &new_active_marker_name) {
+    const std::string& new_active_marker_name) {
     RCLCPP_DEBUG(
         this->get_logger(),
         "MissionControl::set_active_marker_name: Set active_marker_name to %s",
@@ -146,13 +150,13 @@ bool MissionControl::current_mission_finished() {
 
 /**
  * @brief Initializes the wait time timer.
- * 
- * This function initializes the wait time timer with the specified wait time in milliseconds.
- * It creates a wall timer that calls the callback function MissionControl::callback_wait_time
- * after the specified wait time has elapsed.
- * 
+ *
+ * This function initializes the wait time timer with the specified wait time in
+ * milliseconds. It creates a wall timer that calls the callback function
+ * MissionControl::callback_wait_time after the specified wait time has elapsed.
+ *
  * @note Poll `wait_time_finished` to continue after the wait time is over
- * 
+ *
  * @param wait_time_ms The wait time in milliseconds.
  */
 void MissionControl::init_wait(uint16_t wait_time_ms) {
@@ -171,7 +175,7 @@ void MissionControl::init_wait(uint16_t wait_time_ms) {
 
 /**
  * Checks if the wait time has finished.
- * 
+ *
  * @return true if the wait time has finished, false otherwise.
  */
 bool MissionControl::wait_time_finished() {
@@ -180,5 +184,31 @@ bool MissionControl::wait_time_finished() {
         return true;
     } else {
         return false;
+    }
+}
+
+/**
+ * @brief Get the string representation of the mission state.
+ *
+ * This function returns the string representation of the current mission state.
+ * The mission state is obtained using the `get_mission_state()` function.
+ *
+ * @return const char* The string representation of the mission state.
+ *
+ * @throws std::runtime_error if the mission state is unknown.
+ */
+const char* MissionControl::get_mission_state_str() const {
+    switch (get_mission_state()) {
+        ENUM_TO_STR(prepare_mission);
+        ENUM_TO_STR(selfcheck);
+        ENUM_TO_STR(check_drone_configuration);
+        ENUM_TO_STR(armed);
+        ENUM_TO_STR(takeoff);
+        ENUM_TO_STR(decision_maker);
+        ENUM_TO_STR(fly_to_waypoint);
+        ENUM_TO_STR(detect_marker);
+        default:
+            throw std::runtime_error(
+                "MissionControl::get_mission_state_str: Unknown mission state");
     }
 }

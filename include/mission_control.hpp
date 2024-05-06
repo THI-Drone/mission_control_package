@@ -193,6 +193,7 @@ class MissionControl : public common_lib::CommonNode {
     void set_standby_config();
     void set_mission_state(const MissionState_t new_mission_state);
     constexpr MissionState_t get_mission_state() const { return mission_state; }
+    const char* get_mission_state_str() const;
     bool get_state_first_loop();
     bool get_job_finished_successfully();
     nlohmann::json get_job_finished_payload();

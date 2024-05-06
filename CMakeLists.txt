@@ -7,7 +7,7 @@ set(JSON_ImplicitConversions OFF) # deactivate implicit type conversion
 project(mission_control_package)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic -Werror)
+  add_compile_options(-Wall -Wextra -Wpedantic -Werror -Wswitch-default)
 endif()
 
 # find dependencies

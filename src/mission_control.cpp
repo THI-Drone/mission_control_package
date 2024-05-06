@@ -77,8 +77,9 @@ MissionControl::MissionControl() : CommonNode("mission_control") {
         common_lib::topic_names::Control, 10);
 
     // Safety Limits Publisher
-    safety_limits_publisher = this->create_publisher<interfaces::msg::SafetyLimits>(
-        common_lib::topic_names::SafetyLimits, 10);
+    safety_limits_publisher =
+        this->create_publisher<interfaces::msg::SafetyLimits>(
+            common_lib::topic_names::SafetyLimits, 10);
 
     // Fail-Safe checks
     control_subscription =
@@ -225,8 +226,8 @@ void MissionControl::mission_abort(std::string reason) {
                  "MissionControl::mission_abort: Last active node: %s",
                  get_active_node_id().c_str());
     RCLCPP_FATAL(this->get_logger(),
-                 "MissionControl::mission_abort: Internal state: %d",
-                 get_mission_state());
+                 "MissionControl::mission_abort: Internal state: '%s'",
+                 get_mission_state_str());
 
     // Reset internal state
     clear_active_node_id();
