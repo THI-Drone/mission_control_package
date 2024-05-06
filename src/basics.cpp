@@ -33,7 +33,7 @@ void MissionControl::set_mission_state(const MissionState_t new_mission_state) {
     mission_state = new_mission_state;
 
     RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::set_mission_state: Set mission state to %d",
+                 "MissionControl::%s: Set mission state to %d", __func__,
                  mission_state);
 }
 
@@ -48,7 +48,7 @@ void MissionControl::set_mission_state(const MissionState_t new_mission_state) {
  */
 void MissionControl::set_active_node_id(std::string node_id) {
     RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::set_active_node_id: Set active_node_id to %s",
+                 "MissionControl::%s: Set active_node_id to %s", __func__,
                  node_id.c_str());
     active_node_id = node_id;
 }
@@ -62,10 +62,9 @@ void MissionControl::set_active_node_id(std::string node_id) {
  */
 void MissionControl::set_active_marker_name(
     const std::string& new_active_marker_name) {
-    RCLCPP_DEBUG(
-        this->get_logger(),
-        "MissionControl::set_active_marker_name: Set active_marker_name to %s",
-        new_active_marker_name.c_str());
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::%s: Set active_marker_name to %s", __func__,
+                 new_active_marker_name.c_str());
 
     active_marker_name = new_active_marker_name;
 }
@@ -76,9 +75,8 @@ void MissionControl::set_active_marker_name(
  * This function clears the active node ID by setting it to an empty string.
  */
 void MissionControl::clear_active_node_id() {
-    RCLCPP_DEBUG(
-        this->get_logger(),
-        "MissionControl::clear_active_node_id: Cleared active node id");
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::%s: Cleared active node id", __func__);
     active_node_id = "";
 }
 
@@ -167,10 +165,9 @@ void MissionControl::init_wait(uint16_t wait_time_ms) {
         std::chrono::milliseconds(wait_time_ms),
         std::bind(&MissionControl::callback_wait_time, this));
 
-    RCLCPP_DEBUG(
-        this->get_logger(),
-        "MissionControl::callback_wait_time: Started wait time for %u ms",
-        wait_time_ms);
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::%s: Started wait time for %u ms", __func__,
+                 wait_time_ms);
 }
 
 /**
@@ -201,8 +198,8 @@ void MissionControl::cancel_wait() {
     // Make sure that the flag is set to false
     wait_time_finished_ok = false;
 
-    RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::cancel_wait: Canceled wait time");
+    RCLCPP_DEBUG(this->get_logger(), "MissionControl::%s: Canceled wait time",
+                 __func__);
 }
 
 /**
@@ -232,6 +229,7 @@ const char* MissionControl::get_mission_state_str(
         ENUM_TO_STR(detect_marker);
         default:
             throw std::runtime_error(
-                "MissionControl::get_mission_state_str: Unknown mission state");
+                "MissionControl::" + (std::string) __func__ +
+                ": Unknown mission state");
     }
 }

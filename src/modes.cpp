@@ -6,9 +6,8 @@
  */
 void MissionControl::mode_prepare_mission() {
     if (get_state_first_loop()) {
-        RCLCPP_INFO(
-            this->get_logger(),
-            "MissionControl::mode_prepare_mission: Prepare mission started");
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Prepare mission started", __func__);
         set_standby_config();
 
         std::string file_path =
@@ -16,23 +15,22 @@ void MissionControl::mode_prepare_mission() {
         try {
             mission_definition_reader.read_file(file_path, false);
         } catch (const std::runtime_error &e) {
-            mission_abort(
-                "MissionControl::mode_prepare_mission: Failed to read mission "
-                "file: " +
-                (std::string)e.what());
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Failed to read mission "
+                          "file: " +
+                          (std::string)e.what());
         }
 
-        RCLCPP_INFO(
-            this->get_logger(),
-            "MissionControl::mode_prepare_mission: Prepare mission finished");
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Prepare mission finished", __func__);
         set_mission_state(selfcheck);
     }
 }
 
 void MissionControl::initiate_takeoff() {
     if (get_state_first_loop()) {
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::initiate_takeoff: Takeoff initated");
+        RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Takeoff initated",
+                    __func__);
 
         // Activate Mission Control
         send_control_json(this->get_name(), true, {});
@@ -43,13 +41,14 @@ void MissionControl::initiate_takeoff() {
         if (current_flight_mode != interfaces::msg::FlightMode::READY ||
             current_landed_state != interfaces::msg::LandedState::ON_GROUND) {
             RCLCPP_FATAL(this->get_logger(),
-                         "MissionControl::initiate_takeoff: Drone is not in "
+                         "MissionControl::%s: Drone is not in "
                          "'READY' flight mode or not on the ground. Current "
                          "flight mode: %u, Current landed state: %u",
-                         current_flight_mode, current_landed_state);
+                         __func__, current_flight_mode, current_landed_state);
 
             mission_abort(
-                "MissionControl::initiate_takeoff: Drone is not in 'READY' "
+                "MissionControl::" + (std::string) __func__ +
+                ": Drone is not in 'READY' "
                 "flight mode or not on the ground. Current flight mode: " +
                 std::to_string(current_flight_mode) +
                 ", Current landed state: " +
@@ -59,12 +58,13 @@ void MissionControl::initiate_takeoff() {
         // Check that the current position is known
         if (!current_position.values_set) {
             RCLCPP_FATAL(this->get_logger(),
-                         "MissionControl::initiate_takeoff: Cannot takeoff "
-                         "without a valid position");
+                         "MissionControl::%s: Cannot takeoff "
+                         "without a valid position",
+                         __func__);
 
-            mission_abort(
-                "MissionControl::initiate_takeoff: Cannot takeoff without a "
-                "valid position");
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Cannot takeoff without a "
+                          "valid position");
         }
 
         home_position = current_position;
@@ -92,21 +92,21 @@ void MissionControl::initiate_takeoff() {
         uav_command_publisher->publish(msg);
 
         RCLCPP_DEBUG(this->get_logger(),
-                     "MissionControl::initiate_takeoff: Takeoff command sent");
+                     "MissionControl::%s: Takeoff command sent", __func__);
     }
 
     if (current_mission_finished()) {
         // Takeoff finished
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::initiate_takeoff: Takeoff finished");
+        RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Takeoff finished",
+                    __func__);
 
         this->deactivate();
         clear_active_node_id();
 
         set_mission_state(decision_maker);
-        RCLCPP_INFO(
-            this->get_logger(),
-            "MissionControl::initiate_takeoff: make_decision state activated");
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: make_decision state activated",
+                    __func__);
     }
 }
 
@@ -129,21 +129,20 @@ void MissionControl::mode_decision_maker() {
     EventLoopGuard elg(&event_loop_active, false);
 
     RCLCPP_INFO(this->get_logger(),
-                "MissionControl::mode_decision_maker: Decision Maker started");
+                "MissionControl::%s: Decision Maker started", __func__);
 
     RCLCPP_INFO(this->get_logger(),
-                "MissionControl::mode_decision_maker: active_marker_name: "
+                "MissionControl::%s: active_marker_name: "
                 "'%s', current_command_id: %ld, command count: %ld",
-                get_active_marker_name().c_str(), current_command_id,
+                __func__, get_active_marker_name().c_str(), current_command_id,
                 commands.size());
 
     // Check if there are commands left that need to be executed
     if (commands.size() > 0 && current_command_id < commands.size() - 1) {
         current_command_id++;  // move command id one further
-        RCLCPP_DEBUG(
-            this->get_logger(),
-            "MissionControl::mode_decision_maker: Moved command id to: %ld",
-            current_command_id);
+        RCLCPP_DEBUG(this->get_logger(),
+                     "MissionControl::%s: Moved command id to: %ld", __func__,
+                     current_command_id);
     } else  // Move to next marker
     {
         // Store new commands from active marker in storage
@@ -152,16 +151,16 @@ void MissionControl::mode_decision_maker() {
         // Check that marker has not been executed before
         std::string active_marker = get_active_marker_name();
         RCLCPP_DEBUG(this->get_logger(),
-                     "MissionControl::mode_decision_maker: Getting new "
+                     "MissionControl::%s: Getting new "
                      "commands for active marker name: '%s'",
-                     active_marker.c_str());
+                     __func__, active_marker.c_str());
 
         if (executed_marker_names.find(active_marker) !=
             executed_marker_names.end())
-            mission_abort(
-                "MissionControl::mode_decision_maker: Got the same active "
-                "marker two times: " +
-                active_marker);
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Got the same active "
+                          "marker two times: " +
+                          active_marker);
 
         executed_marker_names.insert(active_marker);
 
@@ -170,24 +169,24 @@ void MissionControl::mode_decision_maker() {
             commands =
                 mission_definition_reader.get_marker_commands(active_marker);
         } catch (const std::runtime_error &e) {
-            mission_abort(
-                "MissionControl::mode_decision_maker: Failed to get new "
-                "commands: " +
-                (std::string)e.what());
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Failed to get new "
+                          "commands: " +
+                          (std::string)e.what());
         }
     }
 
     // Check if command list is empty
     if (commands.size() <= 0)
-        mission_abort(
-            "MissionControl::mode_decision_maker: Comand list is empty");
+        mission_abort("MissionControl::" + (std::string) __func__ +
+                      ": Comand list is empty");
 
     // Switch mode based on the current command
     std::string &current_command_type = commands.at(current_command_id).type;
     RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::mode_decision_maker: Switching mode based on "
+                 "MissionControl::%s: Switching mode based on "
                  "command type: '%s'",
-                 current_command_type.c_str());
+                 __func__, current_command_type.c_str());
 
     if (current_command_type == "waypoint")
         set_mission_state(fly_to_waypoint);
@@ -196,8 +195,8 @@ void MissionControl::mode_decision_maker() {
     else if (current_command_type == "end_mission")
         mission_finished();
     else
-        mission_abort(
-            "MissionControl::mode_decision_maker: Unknown command type");
+        mission_abort("MissionControl::" + (std::string) __func__ +
+                      ": Unknown command type");
 }
 
 /**
@@ -212,20 +211,20 @@ void MissionControl::mode_decision_maker() {
  */
 void MissionControl::mode_fly_to_waypoint() {
     if (get_state_first_loop()) {
-        RCLCPP_INFO(
-            this->get_logger(),
-            "MissionControl::mode_fly_to_waypoint: Activating waypoint node");
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Activating waypoint node", __func__);
         RCLCPP_DEBUG(this->get_logger(),
-                     "MissionControl::mode_fly_to_waypoint: Data sent to "
+                     "MissionControl::%s: Data sent to "
                      "waypoint node: %s",
+                     __func__,
                      commands.at(current_command_id).data.dump().c_str());
 
         // Check that current command is of the correct type
         if (commands.at(current_command_id).type != "waypoint")
-            mission_abort(
-                "MissionControl::mode_fly_to_waypoint: command has the wrong "
-                "type: Expected: 'waypoint', Got: '" +
-                commands.at(current_command_id).type + "'");
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": command has the wrong "
+                          "type: Expected: 'waypoint', Got: '" +
+                          commands.at(current_command_id).type + "'");
 
         // Activate Waypoint Node and send the command data as payload
         send_control_json("waypoint_node", true,
@@ -235,8 +234,9 @@ void MissionControl::mode_fly_to_waypoint() {
     // If job finished, return to decision maker for next command
     if (get_job_finished_successfully()) {
         RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::mode_fly_to_waypoint: Job finished "
-                    "successfully. Set mission state to 'decision_maker'.");
+                    "MissionControl::%s: Job finished "
+                    "successfully. Set mission state to 'decision_maker'.",
+                    __func__);
         set_mission_state(decision_maker);
     }
 }
@@ -254,19 +254,21 @@ void MissionControl::mode_fly_to_waypoint() {
 void MissionControl::mode_detect_marker() {
     if (get_state_first_loop()) {
         RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::mode_detect_marker: Activating qr code "
-                    "scanner node");
+                    "MissionControl::%s: Activating qr code "
+                    "scanner node",
+                    __func__);
         RCLCPP_DEBUG(this->get_logger(),
-                     "MissionControl::mode_detect_marker: Data sent to "
+                     "MissionControl::%s: Data sent to "
                      "qr code scanner node: %s",
+                     __func__,
                      commands.at(current_command_id).data.dump().c_str());
 
         // Check that current command is of the correct type
         if (commands.at(current_command_id).type != "detect_marker")
-            mission_abort(
-                "MissionControl::mode_detect_marker: command has the wrong "
-                "type: Expected: 'detect_marker', Got: '" +
-                commands.at(current_command_id).type + "'");
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": command has the wrong "
+                          "type: Expected: 'detect_marker', Got: '" +
+                          commands.at(current_command_id).type + "'");
 
         // Activate QR Code Scanner Node and send the command data as payload
         send_control_json("qr_code_scanner_node", true,
@@ -274,24 +276,24 @@ void MissionControl::mode_detect_marker() {
 
         // Start timeout timer
         init_wait(commands.at(current_command_id).data.at("timeout_ms"));
-        RCLCPP_INFO(
-            this->get_logger(),
-            "MissionControl::mode_detect_marker: Timeout timer started: %u ms "
-            "(= %f s)",
-            commands.at(current_command_id)
-                .data.at("timeout_ms")
-                .get<uint16_t>(),
-            commands.at(current_command_id)
-                    .data.at("timeout_ms")
-                    .get<uint16_t>() /
-                1000.0);
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Timeout timer started: %u ms "
+                    "(= %f s)",
+                    __func__,
+                    commands.at(current_command_id)
+                        .data.at("timeout_ms")
+                        .get<uint16_t>(),
+                    commands.at(current_command_id)
+                            .data.at("timeout_ms")
+                            .get<uint16_t>() /
+                        1000.0);
     }
 
     if (wait_time_finished()) {
         // Timeout reached, aborting mission
-        mission_abort(
-            "MissionControl::mode_detect_marker: Timeout reached without "
-            "decoding a marker");
+        mission_abort("MissionControl::" + (std::string) __func__ +
+                      ": Timeout reached without "
+                      "decoding a marker");
     }
 
     // If job finished, parse payload and return to decision maker for next
@@ -310,10 +312,10 @@ void MissionControl::mode_detect_marker() {
             common_lib::CommandDefinitions::parse_check_json(payload,
                                                              definition);
         } catch (const std::runtime_error &e) {
-            mission_abort(
-                "MissionControl::mode_detect_marker: Failed to parse "
-                "JobFinished payload: " +
-                (std::string)e.what());
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Failed to parse "
+                          "JobFinished payload: " +
+                          (std::string)e.what());
         }
 
         // Set new active marker
@@ -321,9 +323,9 @@ void MissionControl::mode_detect_marker() {
 
         // Set mission state to 'decision_maker'
         RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::mode_detect_marker: Job finished "
+                    "MissionControl::%s: Job finished "
                     "successfully. Set mission state to '%s'.",
-                    get_mission_state_str(decision_maker));
+                    __func__, get_mission_state_str(decision_maker));
         set_mission_state(decision_maker);
     }
 }
@@ -340,7 +342,7 @@ void MissionControl::mode_self_check() {
 
     if (get_state_first_loop()) {
         RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::mode_self_check: Self check started");
+                    "MissionControl::%s: Self check started", __func__);
         set_standby_config();
         i = 0;
     }
@@ -348,22 +350,23 @@ void MissionControl::mode_self_check() {
     const uint32_t max_wait_time = (30 * 1000) / event_loop_time_delta_ms;
     if (i % (1000 / event_loop_time_delta_ms) == 0) {
         RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::mode_self_check: Waiting for heartbeats: "
+                    "MissionControl::%s: Waiting for heartbeats: "
                     "%us / %us",
-                    (i * event_loop_time_delta_ms) / 1000,
+                    __func__, (i * event_loop_time_delta_ms) / 1000,
                     (max_wait_time * event_loop_time_delta_ms) / 1000);
     }
 
     i++;
 
     if (i >= max_wait_time) {
-        RCLCPP_FATAL(
-            this->get_logger(),
-            "MissionControl::mode_self_check: Self check failed: Not all "
-            "heartbeats received in the given timeframe (%us)",
-            (max_wait_time * event_loop_time_delta_ms) / 1000);
+        RCLCPP_FATAL(this->get_logger(),
+                     "MissionControl::%s: Self check failed: Not all "
+                     "heartbeats received in the given timeframe (%us)",
+                     __func__,
+                     (max_wait_time * event_loop_time_delta_ms) / 1000);
         mission_abort(
-            "Self check failed: Not all heartbeats received in the given "
+            "MissionControl::" + (std::string) __func__ +
+            ": Self check failed: Not all heartbeats received in the given "
             "timeframe");
     }
 
@@ -403,7 +406,7 @@ void MissionControl::mode_self_check() {
         }
 
         RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::mode_self_check: Self check finished");
+                    "MissionControl::%s: Self check finished", __func__);
         set_mission_state(check_drone_configuration);
     }
 }
@@ -421,8 +424,9 @@ void MissionControl::mode_self_check() {
 void MissionControl::mode_check_drone_configuration() {
     if (get_state_first_loop()) {
         RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::mode_check_drone_configuration: Check "
-                    "drone configuration started");
+                    "MissionControl::%s: Check "
+                    "drone configuration started",
+                    __func__);
         set_standby_config();
     }
 
@@ -433,22 +437,24 @@ void MissionControl::mode_check_drone_configuration() {
         if (!mission_definition_reader.check_in_geofence(
                 current_position.get_position_array())) {
             RCLCPP_FATAL(this->get_logger(),
-                         "MissionControl::mode_check_drone_configuration: "
-                         "Drone is outside of geofence. Can't arm.");
+                         "MissionControl::%s: "
+                         "Drone is outside of geofence. Can't arm.",
+                         __func__);
 
-            mission_abort(
-                "MissionControl::mode_check_drone_configuration: Drone is "
-                "outside of geofence. Can't arm.");
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Drone is "
+                          "outside of geofence. Can't arm.");
         }
 
         // All checks finished, go to 'armed' state
-        RCLCPP_INFO(
-            this->get_logger(),
-            "MissionControl::mode_check_drone_configuration: Check drone "
-            "configuration finished");
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Check drone "
+                    "configuration finished",
+                    __func__);
         set_mission_state(armed);
         RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::mode_check_drone_configuration: Mission "
-                    "Control armed");
+                    "MissionControl::%s: Mission "
+                    "Control armed",
+                    __func__);
     }
 }

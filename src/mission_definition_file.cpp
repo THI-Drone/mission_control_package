@@ -26,7 +26,8 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
 
     if (!file.good() || !file.is_open())
         throw std::runtime_error(
-            "MissionDefinitionReader::read_file: [READ FILE] Failed to open "
+            "MissionDefinitionReader::" + (std::string) __func__ +
+            ": [READ FILE] Failed to open "
             "file: " +
             file_path);
 
@@ -37,7 +38,8 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
     } catch (const nlohmann::json::parse_error &e) {
         file.close();
         throw std::runtime_error(
-            "MissionDefinitionReader::read_file: [READ FILE] Failed to parse "
+            "MissionDefinitionReader::" + (std::string) __func__ +
+            ": [READ FILE] Failed to parse "
             "JSON: " +
             std::string(e.what()));
     }
@@ -56,10 +58,11 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
         common_lib::CommandDefinitions::parse_check_json(json, definition);
     } catch (const std::runtime_error &e) {
         printf(
-            "MissionDefinitionReader::read_file: [FIRST LEVEL] Checking first "
+            "MissionDefinitionReader::%s: [FIRST LEVEL] Checking first "
             "level of json "
             "failed:\nMake sure that 'safety' and 'markers' exist and have the "
-            "correct value type.\n");
+            "correct value type.\n",
+            __func__);
 
         // Forward exception
         throw e;
@@ -107,14 +110,16 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
 
         if (min_cruise_height_cm > max_height_cm)
             throw std::runtime_error(
-                "MissionDefinitionReader::read_file: [SAFETY] "
+                "MissionDefinitionReader::" + (std::string) __func__ +
+                ": [SAFETY] "
                 "'min_cruise_height_cm' "
                 "can not be higher than 'max_height_cm'");
 
         // Check geofence
         printf(
-            "MissionDefinitionReader::read_file: [SAFETY] Checking geofence "
-            "points:\n");
+            "MissionDefinitionReader::%s: [SAFETY] Checking geofence "
+            "points:\n",
+            __func__);
 
         nlohmann::ordered_json geofence_json = safety_json.at("geofence");
 
@@ -129,10 +134,10 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                     {"lon", {true, common_lib::number_float}}};
 
             printf(
-                "MissionDefinitionReader::read_file: [SAFETY] Checking "
+                "MissionDefinitionReader::%s: [SAFETY] Checking "
                 "geofence point "
                 "number: %ld\n",
-                geofence_points.size());
+                __func__, geofence_points.size());
             common_lib::CommandDefinitions::parse_check_json(
                 geofence_point, geofence_definition);
 
@@ -144,7 +149,8 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                 if (gp.at(0) == geofence_point_pair.at(0) &&
                     gp.at(0) == geofence_point_pair.at(1)) {
                     throw std::runtime_error(
-                        "MissionDefinitionReader::read_file: [SAFETY] Geofence "
+                        "MissionDefinitionReader::" + (std::string) __func__ +
+                        ": [SAFETY] Geofence "
                         "point is "
                         "not unique: LAT: " +
                         std::to_string(geofence_point_pair.at(0)) +
@@ -158,7 +164,8 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
         // Checking that at least 3 geofence points are provided
         if (geofence_points.size() < 3)
             throw std::runtime_error(
-                "MissionDefinitionReader::read_file: [SAFETY] At least 3 "
+                "MissionDefinitionReader::" + (std::string) __func__ +
+                ": [SAFETY] At least 3 "
                 "points most be "
                 "provided (currently: " +
                 std::to_string(geofence_points.size()) + ")");
@@ -167,14 +174,16 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
         safety_settings.set_geofence_points(geofence_points);
 
         printf(
-            "MissionDefinitionReader::read_file: [SAFETY] Geofence points "
+            "MissionDefinitionReader::%s: [SAFETY] Geofence points "
             "checked "
-            "successfully.\n");
+            "successfully.\n",
+            __func__);
     } catch (const std::runtime_error &e) {
         printf(
-            "MissionDefinitionReader::read_file: [SAFETY] Checking second "
+            "MissionDefinitionReader::%s: [SAFETY] Checking second "
             "level of json "
-            "failed: Values of key 'safety' are incorrect.\n");
+            "failed: Values of key 'safety' are incorrect.\n",
+            __func__);
 
         // Forward exception
         throw e;
@@ -185,8 +194,9 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
 
     try {
         printf(
-            "MissionDefinitionReader::read_file: [MARKERS] Checking marker "
-            "values:\n");
+            "MissionDefinitionReader::%s: [MARKERS] Checking marker "
+            "values:\n",
+            __func__);
 
         // Loop through all markers
         std::unordered_set<std::string> marker_names;
@@ -195,14 +205,15 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
         for (const auto &[marker_name, marker_content] : markers_json.items()) {
             // Loop through every marker
             printf(
-                "MissionDefinitionReader::read_file: [MARKERS] Checking marker "
+                "MissionDefinitionReader::%s: [MARKERS] Checking marker "
                 "'%s':\n",
-                marker_name.c_str());
+                __func__, marker_name.c_str());
 
             if (marker_names.find(marker_name) != marker_names.end()) {
                 // duplicate marker detected
                 throw std::runtime_error(
-                    "MissionDefinitionReader::read_file: [MARKERS] Duplicate "
+                    "MissionDefinitionReader::" + (std::string) __func__ +
+                    ": [MARKERS] Duplicate "
                     "marker "
                     "detected: " +
                     marker_name);
@@ -211,7 +222,8 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
             // Check that value is of type array
             if (!marker_content.is_array())
                 throw std::runtime_error(
-                    "MissionDefinitionReader::read_file: [MARKERS] Marker "
+                    "MissionDefinitionReader::" + (std::string) __func__ +
+                    ": [MARKERS] Marker "
                     "value of key "
                     "'" +
                     marker_name + "' is not of type array");
@@ -219,7 +231,8 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
             // Check that at least one command is specified
             if (marker_content.size() <= 0)
                 throw std::runtime_error(
-                    "MissionDefinitionReader::read_file: [MARKERS] Marker "
+                    "MissionDefinitionReader::" + (std::string) __func__ +
+                    ": [MARKERS] Marker "
                     "value of key "
                     "'" +
                     marker_name + "' must have at least one command");
@@ -230,10 +243,10 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                 // Check correct marker value
                 {
                     printf(
-                        "MissionDefinitionReader::read_file: "
+                        "MissionDefinitionReader::%s: "
                         "[MARKERS::COMMAND] Checking that "
                         "'type' and 'data' keys of marker '%s' exist.\n",
-                        marker_name.c_str());
+                        __func__, marker_name.c_str());
 
                     const std::map<const std::string,
                                    const common_lib::JsonKeyDefinition>
@@ -254,11 +267,11 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                         end_mission_command_exists = true;
 
                     printf(
-                        "MissionDefinitionReader::read_file: "
+                        "MissionDefinitionReader::%s: "
                         "[MARKERS::COMMAND] Checking that "
                         "'data' is formatted correctly for the command of type "
                         "'%s'.\n",
-                        marker_type.c_str());
+                        __func__, marker_type.c_str());
 
                     const std::map<const std::string,
                                    const common_lib::JsonKeyDefinition>
@@ -277,15 +290,17 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                             json_marker_data["target_coordinate_lon"]};
 
                         printf(
-                            "MissionDefinitionReader::read_file: "
+                            "MissionDefinitionReader::%s: "
                             "[MARKERS::COMMAND] Checking that "
                             "the waypoint is inside of the geofence: lat: %f, "
                             "lon :%f\n",
-                            point.at(0), point.at(1));
+                            __func__, point.at(0), point.at(1));
 
                         if (!safety_settings.check_in_geofence(point)) {
                             throw std::runtime_error(
-                                "MissionDefinitionReader::read_file: "
+                                "MissionDefinitionReader::" +
+                                (std::string) __func__ +
+                                ": "
                                 "[MARKERS::COMMAND] Waypoint "
                                 "outside of geofence: lat: " +
                                 std::to_string(point.at(0)) +
@@ -293,9 +308,10 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                         }
 
                         printf(
-                            "MissionDefinitionReader::read_file: "
+                            "MissionDefinitionReader::%s: "
                             "[MARKERS::COMMAND] Waypoint "
-                            "check successfull\n");
+                            "check successfull\n",
+                            __func__);
                     }
                 }
             }
@@ -306,22 +322,24 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
 
         if (marker_names.find("init") == marker_names.end())
             throw std::runtime_error(
-                "MissionDefinitionReader::read_file: [MARKERS] required 'init' "
+                "MissionDefinitionReader::" + (std::string) __func__ +
+                ": [MARKERS] required 'init' "
                 "marker is "
                 "not specified");
 
         if (!end_mission_command_exists) {
             throw std::runtime_error(
-                "MissionDefinitionReader::read_file: [MARKERS] At least one "
+                "MissionDefinitionReader::" + (std::string) __func__ +
+                ": [MARKERS] At least one "
                 "command of "
                 "type 'end_mission' must exist");
         }
 
         printf(
-            "MissionDefinitionReader::read_file: [MARKERS] Successfully read "
+            "MissionDefinitionReader::%s: [MARKERS] Successfully read "
             "%ld "
             "markers: ",
-            marker_names.size());
+            __func__, marker_names.size());
         bool first_loop = true;
         for (const auto &marker_name : marker_names) {
             if (!first_loop)
@@ -334,9 +352,10 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
         printf("\n");
     } catch (const std::runtime_error &e) {
         printf(
-            "MissionDefinitionReader::read_file: [MARKERS] Checking second "
+            "MissionDefinitionReader::%s: [MARKERS] Checking second "
             "level of json "
-            "failed: Values of key 'markers' are incorrect.\n");
+            "failed: Values of key 'markers' are incorrect.\n",
+            __func__);
 
         // Forward exception
         throw e;
@@ -400,7 +419,8 @@ std::vector<command> MissionDefinitionReader::get_marker_commands(
     const std::string &marker_name) const {
     if (markers.find(marker_name) == markers.end())
         throw std::runtime_error(
-            "MissionDefinitionReader::get_marker_commands: Marker name not "
+            "MissionDefinitionReader::" + (std::string) __func__ +
+            ": Marker name not "
             "found");
 
     return markers.at(marker_name);

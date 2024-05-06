@@ -128,11 +128,11 @@ void MissionControl::event_loop() {
             mode_detect_marker();
             break;
         default:
-            RCLCPP_ERROR(
-                this->get_logger(),
-                "MissionControl::event_loop: Unknown mission_state: %d",
-                get_mission_state());
-            mission_abort("MissionControl::event_loop: Unknown mission_state");
+            RCLCPP_ERROR(this->get_logger(),
+                         "MissionControl::%s: Unknown mission_state: %d",
+                         __func__, get_mission_state());
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Unknown mission_state");
     }
 }
 
@@ -167,9 +167,9 @@ void MissionControl::send_control(const std::string &target_id,
     }
 
     RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::send_control: Publishing control message for "
+                 "MissionControl::%s: Publishing control message for "
                  "node '%s': active: %d, payload: %s",
-                 target_id.c_str(), active, payload.c_str());
+                 __func__, target_id.c_str(), active, payload.c_str());
 
     control_publisher->publish(msg);
 
@@ -201,8 +201,8 @@ void MissionControl::send_control_json(const std::string &target_id,
         payload = payload_json.dump();
     } catch (const nlohmann::json::type_error &e) {
         mission_abort(
-            "MissionControl::send_control_json: Failed to dump payload_json: " +
-            (std::string)e.what());
+            "MissionControl::" + (std::string) __func__ +
+            ": Failed to dump payload_json: " + (std::string)e.what());
     }
 
     return send_control(target_id, active, payload);
@@ -218,14 +218,12 @@ void MissionControl::send_control_json(const std::string &target_id,
  */
 void MissionControl::mission_abort(std::string reason) {
     RCLCPP_FATAL(this->get_logger(),
-                 "MissionControl::mission_abort: Aborting mission, reason: %s",
+                 "MissionControl::%s: Aborting mission, reason: %s", __func__,
                  reason.c_str());
-    RCLCPP_FATAL(this->get_logger(),
-                 "MissionControl::mission_abort: Last active node: %s",
-                 get_active_node_id().c_str());
-    RCLCPP_FATAL(this->get_logger(),
-                 "MissionControl::mission_abort: Internal state: '%s'",
-                 get_mission_state_str());
+    RCLCPP_FATAL(this->get_logger(), "MissionControl::%s: Last active node: %s",
+                 __func__, get_active_node_id().c_str());
+    RCLCPP_FATAL(this->get_logger(), "MissionControl::%s: Internal state: '%s'",
+                 __func__, get_mission_state_str());
 
     // Reset internal state
     clear_active_node_id();
@@ -239,8 +237,9 @@ void MissionControl::mission_abort(std::string reason) {
 
     // Stop node
     RCLCPP_INFO(this->get_logger(),
-                "MissionControl::mission_abort: Mission finished failure "
-                "message sent, exiting now");
+                "MissionControl::%s: Mission finished failure "
+                "message sent, exiting now",
+                __func__);
 
     exit(EXIT_FAILURE);
 }
@@ -256,9 +255,8 @@ void MissionControl::mission_abort(std::string reason) {
  * 3. Stops the node by exiting with a success status code.
  */
 void MissionControl::mission_finished() {
-    RCLCPP_INFO(
-        this->get_logger(),
-        "MissionControl::mission_finished: Mission finished successfully");
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::%s: Mission finished successfully", __func__);
 
     // Reset internal state
     clear_active_node_id();
@@ -272,8 +270,9 @@ void MissionControl::mission_finished() {
 
     // Stop node
     RCLCPP_INFO(this->get_logger(),
-                "MissionControl::mission_finished: Mission finished message "
-                "sent, exiting now");
+                "MissionControl::%s: Mission finished message "
+                "sent, exiting now",
+                __func__);
 
     exit(EXIT_SUCCESS);
 }

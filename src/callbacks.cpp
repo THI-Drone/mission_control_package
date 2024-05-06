@@ -24,17 +24,18 @@ void MissionControl::job_finished_callback(
         payload = nlohmann::json::parse(msg.payload);
     } catch (const nlohmann::json::exception &e) {
         RCLCPP_ERROR(this->get_logger(),
-                     "MissionControl::job_finished_callback: "
-                     "Failed to parse json in payload");
+                     "MissionControl::%s: "
+                     "Failed to parse json in payload",
+                     __func__);
     }
 
     // Check error code
     if (msg.error_code != EXIT_SUCCESS) {
         // Abort mission
-        std::string error_msg =
-            "MissionControl::job_finished_callback: Received "
-            "job_finished message with error_code: " +
-            msg.error_code;
+        std::string error_msg = "MissionControl::" + (std::string) __func__ +
+                                ": Received "
+                                "job_finished message with error_code: " +
+                                std::to_string(msg.error_code);
 
         if (payload.contains("error_msg"))
             error_msg += ". Error Message: " + payload.at("error_msg").dump();
@@ -47,9 +48,9 @@ void MissionControl::job_finished_callback(
     // message or a programming error in the sender node
     if (msg.sender_id != get_active_node_id()) {
         RCLCPP_WARN(this->get_logger(),
-                    "MissionControl::job_finished_callback: Got a successfull "
+                    "MissionControl::%s: Got a successfull "
                     "job_finished message from an inactive node: %s",
-                    msg.sender_id.c_str());
+                    __func__, msg.sender_id.c_str());
         return;
     }
 
@@ -65,9 +66,9 @@ void MissionControl::job_finished_callback(
     // Set job_finished_successfully flag to true indicating receiving a
     // successfull job_finished message
     RCLCPP_INFO(this->get_logger(),
-                "MissionControl::job_finished_callback: Job finished "
+                "MissionControl::%s: Job finished "
                 "successfully: node_id %s",
-                msg.sender_id.c_str());
+                __func__, msg.sender_id.c_str());
     job_finished_successfully = true;
 }
 
@@ -81,23 +82,23 @@ void MissionControl::job_finished_callback(
  * @param msg The mission start command message
  */
 void MissionControl::mission_start(const interfaces::msg::MissionStart &msg) {
-    RCLCPP_INFO(
-        this->get_logger(),
-        "MissionControl::mission_start: Received mission start command from %s",
-        msg.sender_id.c_str());
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::%s: Received mission start command from %s",
+                __func__, msg.sender_id.c_str());
 
     // Check mission state is armed
     if (get_mission_state() != armed) {
-        RCLCPP_ERROR(
-            get_logger(),
-            "Mission start command received without being in 'armed' state");
+        RCLCPP_ERROR(get_logger(),
+                     "MissionControl::%s: Mission start command received "
+                     "without being in '%s' state",
+                     __func__, get_mission_state_str(armed));
         return;
     }
 
     // Check that sender node id is known
     if (node_map.find(msg.sender_id) == node_map.end()) {
         RCLCPP_ERROR(get_logger(),
-                     "MissionControl::mission_start: Sender node unknown: %s",
+                     "MissionControl::%s: Sender node unknown: '%s'", __func__,
                      msg.sender_id.c_str());
         return;
     }
@@ -105,9 +106,9 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg) {
     // Check that sender has permission to start mission
     if (!node_map[msg.sender_id].can_start_mission) {
         RCLCPP_ERROR(get_logger(),
-                     "MissionControl::mission_start: Sender is not allowed to "
-                     "start the mission: %s",
-                     msg.sender_id.c_str());
+                     "MissionControl::%s: Sender is not allowed to "
+                     "start the mission: '%s'",
+                     __func__, msg.sender_id.c_str());
         return;
     }
 
@@ -115,11 +116,11 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg) {
     set_active_marker_name("init");
 
     // Start mission
-    RCLCPP_INFO(this->get_logger(),
-                "MissionControl::mission_start: Mission started");
+    RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Mission started",
+                __func__);
     set_mission_state(takeoff);
-    RCLCPP_INFO(this->get_logger(),
-                "MissionControl::mission_start: Takeoff initiated");
+    RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Takeoff initiated",
+                __func__);
 }
 
 /**
@@ -132,18 +133,23 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg) {
  */
 void MissionControl::check_control(
     const interfaces::msg::UAVWaypointCommand &msg) {
-    RCLCPP_DEBUG(
-        this->get_logger(),
-        "MissionControl::check_control: Checking FlyToCoord message from %s",
-        msg.sender_id.c_str());
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::%s: Checking '%s' message from %s", __func__,
+                 common_lib::topic_names::UAVWaypointCommand,
+                 msg.sender_id.c_str());
 
     if (msg.sender_id != get_active_node_id())
-        mission_abort(
-            "Unauthorized node sending on fly_to_coord topic registered");
+        mission_abort("MissionControl::" + (std::string) __func__ +
+                      ": Unauthorized node '" + msg.sender_id +
+                      "' sending on '" +
+                      (std::string)common_lib::topic_names::UAVWaypointCommand +
+                      "' topic registered. Currently active node: '" +
+                      get_active_node_id() + "'");
 
     RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::check_control: Checking FlyToCoord message "
-                 "successfull");
+                 "MissionControl::%s: Checking '%s' message "
+                 "successfull",
+                 __func__, common_lib::topic_names::UAVWaypointCommand);
 }
 
 /**
@@ -171,15 +177,17 @@ void MissionControl::check_control(
  * @param msg The received heartbeat message.
  */
 void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
+    // Save current timestamp for later
+    rclcpp::Time timestamp_now = this->now();
+
     // Throw away own heartbeat
     if (msg.sender_id == get_name()) return;
 
     if (node_map.find(msg.sender_id) == node_map.end()) {
-        RCLCPP_ERROR(
-            get_logger(),
-            "MissionControl::heartbeat_callback: Received unregistered "
-            "heartbeat: %s",
-            msg.sender_id.c_str());
+        RCLCPP_ERROR(get_logger(),
+                     "MissionControl::%s: Received unregistered "
+                     "heartbeat: %s",
+                     __func__, msg.sender_id.c_str());
         return;
     }
 
@@ -187,14 +195,13 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     if (node_map[msg.sender_id].is_fcc_bridge) {
         if ((!msg.active) && get_mission_state() != selfcheck &&
             get_mission_state() != prepare_mission) {
-            RCLCPP_FATAL(
-                get_logger(),
-                "MissionControl::heartbeat_callback: Node '%s' is no longer "
-                "active but is required to be active for the mission",
-                msg.sender_id.c_str());
+            RCLCPP_FATAL(get_logger(),
+                         "MissionControl::%s: Node '%s' is no longer "
+                         "active but is required to be active for the mission",
+                         __func__, msg.sender_id.c_str());
 
-            mission_abort("MissionControl::heartbeat_callback: Node '" +
-                          msg.sender_id +
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Node '" + msg.sender_id +
                           "' is no longer active but is required to be active "
                           "for the mission");
         } else {
@@ -204,22 +211,22 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     } else {
         // Check that active state matches the internal state
         if (msg.active && (msg.sender_id != get_active_node_id())) {
-            RCLCPP_FATAL(
-                get_logger(),
-                "MissionControl::heartbeat_callback: Node '%s' is active even "
-                "though it should be deactive",
-                msg.sender_id.c_str());
-            mission_abort(
-                "A node was active even though it should be deactive");
+            RCLCPP_FATAL(get_logger(),
+                         "MissionControl::%s: Node '%s' is active even "
+                         "though it should be deactive",
+                         __func__, msg.sender_id.c_str());
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Node '" + msg.sender_id +
+                          "' was active even though it should be deactive");
         }
         if ((!msg.active) && (msg.sender_id == get_active_node_id())) {
-            RCLCPP_FATAL(
-                get_logger(),
-                "MissionControl::heartbeat_callback: Node '%s' is deactive "
-                "even though it should be active",
-                msg.sender_id.c_str());
-            mission_abort(
-                "A node was deactive even though it should be active");
+            RCLCPP_FATAL(get_logger(),
+                         "MissionControl::%s: Node '%s' is deactive "
+                         "even though it should be active",
+                         __func__, msg.sender_id.c_str());
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Node '" + msg.sender_id +
+                          "' was deactive even though it should be active");
         }
     }
 
@@ -228,32 +235,34 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     if ((msg.tick == heartbeat.tick) ||
         (msg.tick <= heartbeat.tick && msg.tick != 0)) {
         RCLCPP_ERROR(get_logger(),
-                     "MissionControl::heartbeat_callback: Invalid tick "
-                     "received from: %s",
-                     msg.sender_id.c_str());
+                     "MissionControl::%s: Invalid tick "
+                     "received from: %s. Ignoring heartbeat message",
+                     __func__, msg.sender_id.c_str());
         return;
     }
     heartbeat.tick = msg.tick;
 
     // Check timestamp
-    rclcpp::Time timestamp_now = this->now();
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             heartbeat_max_timestamp_age_ms))) {
-        RCLCPP_ERROR(get_logger(),
-                     "MissionControl::heartbeat_callback: Received too old "
+        RCLCPP_FATAL(get_logger(),
+                     "MissionControl::%s: Received too old "
                      "timestamp: %s",
-                     msg.sender_id.c_str());
+                     __func__, msg.sender_id.c_str());
         mission_abort(
-            "A too old timestamp was received in a heartbeat message");
+            "MissionControl::" + (std::string) __func__ +
+            ": Received too old timestamp in heartbeat message from '" +
+            msg.sender_id + "'");
     }
 
     heartbeat.received = true;
     heartbeat.active = msg.active;
 
     RCLCPP_DEBUG(this->get_logger(),
-                 "Received heartbeat from: '%s', tick: %u, active: %d",
-                 msg.sender_id.c_str(), msg.tick, msg.active);
+                 "MissionControl::%s: Received heartbeat from: '%s', tick: %u, "
+                 "active: %d",
+                 __func__, msg.sender_id.c_str(), msg.tick, msg.active);
 }
 
 /**
@@ -272,19 +281,18 @@ void MissionControl::heartbeat_timer_callback() {
 
         if (hp.received == false) {
             err_flag = true;
-            RCLCPP_ERROR(
-                this->get_logger(),
-                "MissionControl::heartbeat_timer_callback: No heartbeat "
-                "from '%s' received!",
-                nm.first.c_str());
+            RCLCPP_ERROR(this->get_logger(),
+                         "MissionControl::%s: No heartbeat "
+                         "from '%s' received!",
+                         __func__, nm.first.c_str());
         }
 
         if (nm.second.is_fcc_bridge && !nm.second.hb_payload.active) {
             err_flag = true;
             RCLCPP_ERROR(this->get_logger(),
-                         "MissionControl::heartbeat_timer_callback: Node '%s' "
+                         "MissionControl::%s: Node '%s' "
                          "is not active but this is required for the mission!",
-                         nm.first.c_str());
+                         __func__, nm.first.c_str());
         }
 
         hp.received = false;
@@ -294,14 +302,18 @@ void MissionControl::heartbeat_timer_callback() {
 
     if (heartbeat_received_all) {
         RCLCPP_DEBUG(this->get_logger(),
-                     "MissionControl::heartbeat_timer_callback: All heartbeats "
-                     "received");
+                     "MissionControl::%s: All heartbeats "
+                     "received",
+                     __func__);
     } else {
         if (get_mission_state() != selfcheck &&
             get_mission_state() != prepare_mission) {
             mission_abort(
-                "Missing heartbeat or FCC bridge not active while not in "
-                "'selfcheck' or 'prepare_mission' state");
+                "MissionControl::" + (std::string) __func__ +
+                ": Missing heartbeat or FCC bridge not active while not in "
+                "'" +
+                get_mission_state_str(selfcheck) + "' or '" +
+                get_mission_state_str(prepare_mission) + "' state");
         }
     }
 }
@@ -319,14 +331,16 @@ void MissionControl::heartbeat_timer_callback() {
  */
 void MissionControl::position_callback(
     const interfaces::msg::GPSPosition &msg) {
+    // Store current timestamp for later
+    rclcpp::Time timestamp_now = this->now();
+
     RCLCPP_DEBUG(this->get_logger(),
-                 "WaypointNode::callback_position: Received position from "
+                 "WaypointNode::%s: Received position from "
                  "'%s': lat: %f, lon: %f, height: %f",
-                 msg.sender_id.c_str(), msg.latitude_deg, msg.longitude_deg,
-                 msg.relative_altitude_m);
+                 __func__, msg.sender_id.c_str(), msg.latitude_deg,
+                 msg.longitude_deg, msg.relative_altitude_m);
 
     // Check timestamp
-    rclcpp::Time timestamp_now = this->now();
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             max_position_msg_time_difference_ms))) {
@@ -336,18 +350,20 @@ void MissionControl::position_callback(
 
         if (this->get_active()) {
             RCLCPP_FATAL(get_logger(),
-                         "WaypointNode::callback_position: Received too old "
+                         "WaypointNode::%s: Received too old "
                          "timestamp in position message: %s. Aborting Job.",
-                         msg.sender_id.c_str());
-            mission_abort(
-                "A too old timestamp was received in a position message while "
-                "being active");
+                         __func__, msg.sender_id.c_str());
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": A too old timestamp was received in a position "
+                          "message while "
+                          "being active");
         } else {
             // Warn but still store values
             RCLCPP_WARN(get_logger(),
-                        "WaypointNode::callback_position: Received too old "
-                        "timestamp in position message: %s",
-                        msg.sender_id.c_str());
+                        "WaypointNode::%s: Received too old "
+                        "timestamp in position message: %s. Values will be "
+                        "used regardless.",
+                        __func__, msg.sender_id.c_str());
         }
     }
 
@@ -371,50 +387,67 @@ void MissionControl::position_callback(
  */
 void MissionControl::mission_progress_callback(
     const interfaces::msg::MissionProgress &msg) {
+    // Store current timestamp for later
+    rclcpp::Time timestamp_now = this->now();
+
     RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::mission_progress_callback: Received mission "
+                 "MissionControl::%s: Received mission "
                  "progress from '%s': progress: %f / 1.0",
-                 msg.sender_id.c_str(), msg.progress);
+                 __func__, msg.sender_id.c_str(), msg.progress);
 
     // Check timestamp
-    rclcpp::Time timestamp_now = this->now();
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             max_progress_msg_time_difference_ms))) {
         // Warn
         RCLCPP_WARN(get_logger(),
-                    "MissionControl::mission_progress_callback: Received too "
-                    "old timestamp in progress message: %s.",
-                    msg.sender_id.c_str());
+                    "MissionControl::%s: Received too "
+                    "old timestamp in progress message: %s. Values will be "
+                    "used regardless.",
+                    __func__, msg.sender_id.c_str());
     }
 
     // Store value
     mission_progress = msg.progress;
 }
 
+/**
+ * @brief Callback function for receiving flight state messages.
+ *
+ * This function is called when a flight state message is received. It extracts
+ * the flight mode and landed state from the message and stores them in the
+ * `current_flight_mode` and `current_landed_state` variables respectively.
+ * It also checks the timestamp of the message and ignores it if it is too old.
+ *
+ * @param msg The flight state message received.
+ */
 void MissionControl::flight_state_callback(
     const interfaces::msg::FlightState &msg) {
+    // Store current timestamp for later
+    rclcpp::Time timestamp_now = this->now();
+
     RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::flight_state_callback: Received flight "
+                 "MissionControl::%s: Received flight "
                  "state from '%s': mode: %u, landed_state: %u",
-                 msg.sender_id.c_str(), msg.mode.mode, msg.state.state);
+                 __func__, msg.sender_id.c_str(), msg.mode.mode,
+                 msg.state.state);
 
     // Check timestamp
-    rclcpp::Time timestamp_now = this->now();
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             max_flight_state_msg_time_difference_ms))) {
         // Warn and ignore message
-        RCLCPP_WARN(
-            get_logger(),
-            "MissionControl::flight_state_callback: Received too "
-            "old timestamp in flight state message: %s, mode: %u, landed_state: %u. Ignoring message.",
-            msg.sender_id.c_str(), msg.mode.mode, msg.state.state);
+        RCLCPP_WARN(get_logger(),
+                    "MissionControl::%s: Received too "
+                    "old timestamp in flight state message: %s, mode: %u, "
+                    "landed_state: %u. Ignoring message.",
+                    __func__, msg.sender_id.c_str(), msg.mode.mode,
+                    msg.state.state);
 
         return;
     }
 
-    // Store value
+    // Store values
     current_flight_mode = msg.mode.mode;
     current_landed_state = msg.state.state;
 }
@@ -429,27 +462,29 @@ void MissionControl::flight_state_callback(
  * @param msg The UAV health message received.
  */
 void MissionControl::health_callback(const interfaces::msg::UAVHealth &msg) {
-    RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::health_callback: Received flight "
-                 "state from '%s': GYRO: %d, ACCEL: %d, MAGN: %d, LOCALPOS: "
-                 "%d, GLOBALPOS: %d, HOMEPOS: %d, ARMABLE: %d",
-                 msg.sender_id.c_str(), msg.is_gyrometer_calibration_ok,
-                 msg.is_accelerometer_calibration_ok,
-                 msg.is_magnetometer_calibration_ok, msg.is_local_position_ok,
-                 msg.is_global_position_ok, msg.is_home_position_ok,
-                 msg.is_armable);
+    // Store current timestamp for later
+    rclcpp::Time timestamp_now = this->now();
+
+    RCLCPP_DEBUG(
+        this->get_logger(),
+        "MissionControl::%s: Received flight "
+        "state from '%s': GYRO: %d, ACCEL: %d, MAGN: %d, LOCALPOS: "
+        "%d, GLOBALPOS: %d, HOMEPOS: %d, ARMABLE: %d",
+        __func__, msg.sender_id.c_str(), msg.is_gyrometer_calibration_ok,
+        msg.is_accelerometer_calibration_ok, msg.is_magnetometer_calibration_ok,
+        msg.is_local_position_ok, msg.is_global_position_ok,
+        msg.is_home_position_ok, msg.is_armable);
 
     // Check timestamp
-    rclcpp::Time timestamp_now = this->now();
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             max_health_msg_time_difference_ms))) {
         // Warn and ignore message
         RCLCPP_WARN(
             get_logger(),
-            "MissionControl::health_callback: Received too "
+            "MissionControl::%s: Received too "
             "old timestamp in flight state message: %s. Ignoring message.",
-            msg.sender_id.c_str());
+            __func__, msg.sender_id.c_str());
 
         return;
     }
@@ -464,18 +499,19 @@ void MissionControl::health_callback(const interfaces::msg::UAVHealth &msg) {
     // Check that drone health is still good
     if (!drone_health_ok && get_mission_state() != selfcheck &&
         get_mission_state() != prepare_mission) {
-        RCLCPP_WARN(
-            get_logger(),
-            "MissionControl::health_callback: Health is no longer good: "
-            "GYRO: %d, ACCEL: %d, MAGN: %d, LOCALPOS: "
-            "%d, GLOBALPOS: %d, HOMEPOS: %d, ARMABLE: %d",
-            msg.is_gyrometer_calibration_ok,
-            msg.is_accelerometer_calibration_ok,
-            msg.is_magnetometer_calibration_ok, msg.is_local_position_ok,
-            msg.is_global_position_ok, msg.is_home_position_ok, msg.is_armable);
+        RCLCPP_WARN(get_logger(),
+                    "MissionControl::%s: Health is no longer good: "
+                    "GYRO: %d, ACCEL: %d, MAGN: %d, LOCALPOS: "
+                    "%d, GLOBALPOS: %d, HOMEPOS: %d, ARMABLE: %d",
+                    __func__, msg.is_gyrometer_calibration_ok,
+                    msg.is_accelerometer_calibration_ok,
+                    msg.is_magnetometer_calibration_ok,
+                    msg.is_local_position_ok, msg.is_global_position_ok,
+                    msg.is_home_position_ok, msg.is_armable);
 
         mission_abort(
-            "MissionControl::health_callback: Health is no longer good: "
+            "MissionControl::" + (std::string) __func__ +
+            ": Health is no longer good: "
             "GYRO: " +
             std::to_string(msg.is_gyrometer_calibration_ok) +
             ", ACCEL: " + std::to_string(msg.is_accelerometer_calibration_ok) +
@@ -494,8 +530,8 @@ void MissionControl::health_callback(const interfaces::msg::UAVHealth &msg) {
  * time timer and sets the `wait_time_finished_ok` flag to true.
  */
 void MissionControl::callback_wait_time() {
-    RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::callback_wait_time: Finished wait time");
+    RCLCPP_DEBUG(this->get_logger(), "MissionControl::%s: Finished wait time",
+                 __func__);
 
     wait_time_timer->cancel();
 
