@@ -5,18 +5,16 @@ using std::placeholders::_1;
 MissionControl::MissionControl() : CommonNode("mission_control") {
     // Register nodes
     const std::string node_names[] = {"telemetry_node", "waypoint_node",
-                                      "fcc_bridge"};
+                                      "fcc_bridge", "qr_code_scanner_node"};
 
     for (const std::string &name : node_names) {
         node_map[name] = ros_node();
     }
 
     // Allowing fcc_bridge to start the mission
-    // TODO change with real node_id
     node_map["fcc_bridge"].can_start_mission = true;
 
     // Setting fcc flag for fcc_bridge
-    // TODO change with real node_id
     node_map["fcc_bridge"].is_fcc_bridge = true;
 
     // Initialize Heartbeat
@@ -126,9 +124,9 @@ void MissionControl::event_loop() {
         case fly_to_waypoint:
             mode_fly_to_waypoint();
             break;
-
-            // TODO implement other states
-
+        case detect_marker:
+            mode_detect_marker();
+            break;
         default:
             RCLCPP_ERROR(
                 this->get_logger(),

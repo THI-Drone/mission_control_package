@@ -35,7 +35,6 @@
 #include "interfaces/msg/uav_waypoint_command.hpp"
 #include "interfaces/msg/waypoint.hpp"
 
-
 /**
  * @brief Enumeration representing the different states of a mission.
  */
@@ -195,6 +194,7 @@ class MissionControl : public common_lib::CommonNode {
     void set_mission_state(const MissionState_t new_mission_state);
     constexpr MissionState_t get_mission_state() const { return mission_state; }
     const char *get_mission_state_str() const;
+    const char *get_mission_state_str(MissionState_t mission_state) const;
     bool get_state_first_loop();
     bool get_job_finished_successfully();
     nlohmann::json get_job_finished_payload();
@@ -202,6 +202,7 @@ class MissionControl : public common_lib::CommonNode {
     // Wait time
     void init_wait(uint16_t wait_time_ms);
     bool wait_time_finished();
+    void cancel_wait();
     void callback_wait_time();
 
     // Mission Progress
@@ -239,6 +240,9 @@ class MissionControl : public common_lib::CommonNode {
 
     // Fly to waypoint
     void mode_fly_to_waypoint();
+
+    // Detect marker
+    void mode_detect_marker();
 
     // Control Functions
     void send_control(const std::string &target_id, const bool active,

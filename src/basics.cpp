@@ -188,7 +188,25 @@ bool MissionControl::wait_time_finished() {
 }
 
 /**
- * @brief Get the string representation of the mission state.
+ * @brief Cancels the current wait time and sets the flag to false.
+ *
+ * This function cancels the current timer used for waiting and sets the
+ * `wait_time_finished_ok` flag to false. It is used to cancel the wait time
+ * early when needed.
+ */
+void MissionControl::cancel_wait() {
+    // Cancel current timer
+    wait_time_timer->cancel();
+
+    // Make sure that the flag is set to false
+    wait_time_finished_ok = false;
+
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::cancel_wait: Canceled wait time");
+}
+
+/**
+ * @brief Get the string representation of the current mission state.
  *
  * This function returns the string representation of the current mission state.
  * The mission state is obtained using the `get_mission_state()` function.
@@ -198,7 +216,12 @@ bool MissionControl::wait_time_finished() {
  * @throws std::runtime_error if the mission state is unknown.
  */
 const char* MissionControl::get_mission_state_str() const {
-    switch (get_mission_state()) {
+    return get_mission_state_str(get_mission_state());
+}
+
+const char* MissionControl::get_mission_state_str(
+    MissionState_t mission_state) const {
+    switch (mission_state) {
         ENUM_TO_STR(prepare_mission);
         ENUM_TO_STR(selfcheck);
         ENUM_TO_STR(check_drone_configuration);

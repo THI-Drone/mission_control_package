@@ -206,7 +206,7 @@ void MissionControl::mode_decision_maker() {
  * This function activates the waypoint node and sends the command data as
  * payload. It checks if the current command is of the correct type and aborts
  * the mission if it's not. If the job finished successfully, it sets the
- * mission state to "decision_maker" for the next command.
+ * mission state to `decision_maker` for the next command.
  *
  * @note This function ignores `job_finished_payload` as it is not relevant.
  */
@@ -242,6 +242,93 @@ void MissionControl::mode_fly_to_waypoint() {
 }
 
 /**
+ * @brief Executes the "detect_marker" mode of the mission control.
+ *
+ * This function activates the QR code scanner node, sends the command data as
+ * payload, starts a timeout timer, and waits for the job to finish
+ * successfully. If the timeout is reached without decoding a marker, the
+ * mission is aborted. Once the job is finished successfully, the payload is
+ * parsed, the new active marker is set, and the mission state is set to
+ * `decision_maker`.
+ */
+void MissionControl::mode_detect_marker() {
+    if (get_state_first_loop()) {
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::mode_detect_marker: Activating qr code "
+                    "scanner node");
+        RCLCPP_DEBUG(this->get_logger(),
+                     "MissionControl::mode_detect_marker: Data sent to "
+                     "qr code scanner node: %s",
+                     commands.at(current_command_id).data.dump().c_str());
+
+        // Check that current command is of the correct type
+        if (commands.at(current_command_id).type != "detect_marker")
+            mission_abort(
+                "MissionControl::mode_detect_marker: command has the wrong "
+                "type: Expected: 'detect_marker', Got: '" +
+                commands.at(current_command_id).type + "'");
+
+        // Activate QR Code Scanner Node and send the command data as payload
+        send_control_json("qr_code_scanner_node", true,
+                          commands.at(current_command_id).data);
+
+        // Start timeout timer
+        init_wait(commands.at(current_command_id).data.at("timeout_ms"));
+        RCLCPP_INFO(
+            this->get_logger(),
+            "MissionControl::mode_detect_marker: Timeout timer started: %u ms "
+            "(= %f s)",
+            commands.at(current_command_id)
+                .data.at("timeout_ms")
+                .get<uint16_t>(),
+            commands.at(current_command_id)
+                    .data.at("timeout_ms")
+                    .get<uint16_t>() /
+                1000.0);
+    }
+
+    if (wait_time_finished()) {
+        // Timeout reached, aborting mission
+        mission_abort(
+            "MissionControl::mode_detect_marker: Timeout reached without "
+            "decoding a marker");
+    }
+
+    // If job finished, parse payload and return to decision maker for next
+    // command
+    if (get_job_finished_successfully()) {
+        // Cancel timeout timer
+        cancel_wait();
+
+        // Decode JobFinished payload
+        nlohmann::json payload = get_job_finished_payload();
+
+        std::map<const std::string, const common_lib::JsonKeyDefinition>
+            definition = {{"marker", {true, common_lib::string}}};
+
+        try {
+            common_lib::CommandDefinitions::parse_check_json(payload,
+                                                             definition);
+        } catch (const std::runtime_error &e) {
+            mission_abort(
+                "MissionControl::mode_detect_marker: Failed to parse "
+                "JobFinished payload: " +
+                (std::string)e.what());
+        }
+
+        // Set new active marker
+        set_active_marker_name(payload.at("marker"));
+
+        // Set mission state to 'decision_maker'
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::mode_detect_marker: Job finished "
+                    "successfully. Set mission state to '%s'.",
+                    get_mission_state_str(decision_maker));
+        set_mission_state(decision_maker);
+    }
+}
+
+/**
  * @brief Executes the self-check of the mission control.
  *
  * This function performs a self-check by waiting for a good GPS signal and
@@ -270,7 +357,7 @@ void MissionControl::mode_self_check() {
     i++;
 
     if (i >= max_wait_time) {
-        RCLCPP_ERROR(
+        RCLCPP_FATAL(
             this->get_logger(),
             "MissionControl::mode_self_check: Self check failed: Not all "
             "heartbeats received in the given timeframe (%us)",
