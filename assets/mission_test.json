@@ -53,8 +53,10 @@
             }
          },
          {
-            "type": "end_mission",
-            "data": {}
+            "type": "detect_marker",
+            "data": {
+               "timeout_ms": 30000
+            }
          }
       ],
       "1": [
