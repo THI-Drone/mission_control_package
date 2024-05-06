@@ -128,7 +128,8 @@ inline std::vector<std::array<T, 2>> getConvexHull(
  * of the convex hull
  */
 template <typename T>
-inline bool isIn(const std::vector<std::array<T, 2>> &polygon, const std::array<T, 2> &p) {
+inline bool isIn(const std::vector<std::array<T, 2>> &polygon,
+                 const std::array<T, 2> &p) {
     static_assert(std::is_arithmetic<T>::value, "T must be an arithmetic type");
     bool inside{false};
     if (2 < polygon.size()) {
