@@ -84,6 +84,11 @@ MissionControl::MissionControl() : CommonNode("mission_control") {
         this->create_subscription<interfaces::msg::UAVWaypointCommand>(
             common_lib::topic_names::UAVWaypointCommand, 10,
             std::bind(&MissionControl::waypoint_command_callback, this, _1));
+    
+    command_subscription =
+        this->create_subscription<interfaces::msg::UAVCommand>(
+            common_lib::topic_names::UAVCommand, 10,
+            std::bind(&MissionControl::command_callback, this, _1));
 
     // Initialize Event Loop
     event_loop_timer = this->create_wall_timer(
@@ -161,8 +166,10 @@ void MissionControl::send_control(const std::string &target_id,
     msg.payload = payload;
 
     if (active) {
+        // Set node as active
         set_active_node_id(target_id);
     } else if (target_id == get_active_node_id()) {
+        // Reset active node id if it is currently active
         clear_active_node_id();
     }
 

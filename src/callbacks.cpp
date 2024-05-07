@@ -55,7 +55,7 @@ void MissionControl::job_finished_callback(
     }
 
     // Send control message to explicitly deactivate node
-    send_control(msg.sender_id, false, "{}");
+    send_control_json(msg.sender_id, false, {});
 
     // Deactivate node in internal state
     clear_active_node_id();
@@ -124,32 +124,106 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg) {
 }
 
 /**
- * @brief Checks the sender of each UAVWaypointCommand message
+ * @brief Callback function for handling UAV waypoint command messages.
  *
- * Aborts mission if an unauthorized sender is sending on the UAVWaypointCommand
- * topic.
+ * This function is called when a UAV waypoint command message is received.
+ * It performs several checks on the message, including checking the sender's
+ * ID and the timestamp of the message. If the checks pass, the function
+ * continues with the necessary operations. If the checks fail, appropriate
+ * error messages are logged and the mission aborts.
  *
- * @param msg The UAVWaypointCommand message to be checked.
+ * @note Aborts the mission if an unauthorized sender is sending on the
+ * UAVWaypointCommand topic. Too old messages are ignored.
+ *
+ * @param msg The UAV waypoint command message received.
  */
 void MissionControl::waypoint_command_callback(
     const interfaces::msg::UAVWaypointCommand &msg) {
+    // Store current timestamp for later
+    rclcpp::Time timestamp_now = this->now();
+
     RCLCPP_DEBUG(this->get_logger(),
                  "MissionControl::%s: Checking '%s' message from %s", __func__,
                  common_lib::topic_names::UAVWaypointCommand,
                  msg.sender_id.c_str());
 
-    if (msg.sender_id != get_active_node_id())
+    // Check that sender is allowed to send on the topic
+    if (msg.sender_id != get_active_node_id()) {
+        // Check timestamp: If it is too old, ingore message as sender might
+        // have been allowed to send at that time
+        if (timestamp_now - rclcpp::Time(msg.time_stamp) >
+            rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+                max_waypoint_command_msg_time_difference_ms))) {
+            // Send Error message
+            RCLCPP_ERROR(get_logger(),
+                         "MissionControl::%s: Received too "
+                         "old timestamp in waypoint command message from '%s' "
+                         "from that is currently not allowed to send. "
+                         "Currently allowed node: '%s'",
+                         __func__, msg.sender_id.c_str(),
+                         get_active_node_id().c_str());
+
+            // Deactivate node to be sure that it is not accidentaly still
+            // active
+            send_control_json(msg.sender_id, false, {});
+
+            // Ignore message
+            return;
+        }
+
+        RCLCPP_FATAL(get_logger(),
+                     "MissionControl::%s: The node '%s' sent a message on the "
+                     "'%s' topic, but it is not allowed to do so. "
+                     "Currently allowed node: '%s'",
+                     __func__, msg.sender_id.c_str(),
+                     common_lib::topic_names::UAVWaypointCommand,
+                     get_active_node_id().c_str());
+
         mission_abort("MissionControl::" + (std::string) __func__ +
                       ": Unauthorized node '" + msg.sender_id +
                       "' sending on '" +
                       (std::string)common_lib::topic_names::UAVWaypointCommand +
                       "' topic registered. Currently active node: '" +
                       get_active_node_id() + "'");
+    }
 
     RCLCPP_DEBUG(this->get_logger(),
                  "MissionControl::%s: Checking '%s' message "
                  "successfull",
                  __func__, common_lib::topic_names::UAVWaypointCommand);
+}
+
+/**
+ * @brief Callback function for handling the UAVCommand message.
+ *
+ * This function is called when a new UAVCommand message is received. It checks
+ * the sender ID of the message and verifies if it is allowed to send on the
+ * UAVCommand topic. If the sender is unauthorized, it calls the mission_abort
+ * function with an appropriate error message.
+ *
+ * @note Only Mission Control is allowed to send on this topic.
+ *
+ * @param msg The UAVCommand message received.
+ */
+void MissionControl::command_callback(const interfaces::msg::UAVCommand &msg) {
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::%s: Checking '%s' message from %s", __func__,
+                 common_lib::topic_names::UAVCommand, msg.sender_id.c_str());
+
+    // Only Mission Control is allowed to send on this topic
+    if (msg.sender_id != this->get_name()) {
+        mission_abort(
+            "MissionControl::" + (std::string) __func__ +
+            ": Unauthorized node '" + msg.sender_id + "' sending on '" +
+            (std::string)common_lib::topic_names::UAVCommand +
+            "' topic registered. Only allowed node to send on this topic: '" +
+            (std::string)this->get_name() + "'");
+    }
+
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::%s: Checking '%s' message "
+                 "successfull",
+                 __func__, common_lib::topic_names::UAVCommand);
 }
 
 /**

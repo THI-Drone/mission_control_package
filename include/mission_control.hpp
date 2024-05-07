@@ -145,6 +145,8 @@ class MissionControl : public common_lib::CommonNode {
     // Fail-Safe Checks
     rclcpp::Subscription<interfaces::msg::UAVWaypointCommand>::SharedPtr
         waypoint_command_subscription;
+    rclcpp::Subscription<interfaces::msg::UAVCommand>::SharedPtr
+        command_subscription;
 
     // Heartbeat
     static constexpr uint16_t heartbeat_period_ms =
@@ -171,6 +173,9 @@ class MissionControl : public common_lib::CommonNode {
 
     static constexpr uint16_t max_health_msg_time_difference_ms =
         500;  //!< Maximum age of a health message from FCC bridge
+
+    static constexpr uint16_t max_waypoint_command_msg_time_difference_ms =
+        200;  //!< Maximum age of a waypoint command message to FCC bridge
 
     // FCC Bridge callbacks
     rclcpp::Subscription<interfaces::msg::GPSPosition>::SharedPtr
@@ -259,6 +264,7 @@ class MissionControl : public common_lib::CommonNode {
     // Fail-Safe checks
     void waypoint_command_callback(
         const interfaces::msg::UAVWaypointCommand &msg);
+    void command_callback(const interfaces::msg::UAVCommand &msg);
 
     // Heartbeat
     void heartbeat_callback(const interfaces::msg::Heartbeat &msg);
