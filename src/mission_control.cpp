@@ -4,8 +4,8 @@ using std::placeholders::_1;
 
 MissionControl::MissionControl() : CommonNode("mission_control") {
     // Register nodes
-    const std::string node_names[] = {"telemetry_node", "waypoint_node",
-                                      "fcc_bridge", "qr_code_scanner_node"};
+    const std::string node_names[] = {"waypoint_node", "fcc_bridge",
+                                      "qr_code_scanner_node"};
 
     for (const std::string &name : node_names) {
         node_map[name] = ros_node();
