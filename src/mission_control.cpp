@@ -84,7 +84,7 @@ MissionControl::MissionControl() : CommonNode("mission_control") {
         this->create_subscription<interfaces::msg::UAVWaypointCommand>(
             common_lib::topic_names::UAVWaypointCommand, 10,
             std::bind(&MissionControl::waypoint_command_callback, this, _1));
-    
+
     command_subscription =
         this->create_subscription<interfaces::msg::UAVCommand>(
             common_lib::topic_names::UAVCommand, 10,
