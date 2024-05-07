@@ -80,10 +80,10 @@ MissionControl::MissionControl() : CommonNode("mission_control") {
             common_lib::topic_names::SafetyLimits, 10);
 
     // Fail-Safe checks
-    control_subscription =
+    waypoint_command_subscription =
         this->create_subscription<interfaces::msg::UAVWaypointCommand>(
             common_lib::topic_names::UAVWaypointCommand, 10,
-            std::bind(&MissionControl::check_control, this, _1));
+            std::bind(&MissionControl::waypoint_command_callback, this, _1));
 
     // Initialize Event Loop
     event_loop_timer = this->create_wall_timer(

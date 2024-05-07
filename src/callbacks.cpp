@@ -131,7 +131,7 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg) {
  *
  * @param msg The UAVWaypointCommand message to be checked.
  */
-void MissionControl::check_control(
+void MissionControl::waypoint_command_callback(
     const interfaces::msg::UAVWaypointCommand &msg) {
     RCLCPP_DEBUG(this->get_logger(),
                  "MissionControl::%s: Checking '%s' message from %s", __func__,

@@ -144,7 +144,7 @@ class MissionControl : public common_lib::CommonNode {
 
     // Fail-Safe Checks
     rclcpp::Subscription<interfaces::msg::UAVWaypointCommand>::SharedPtr
-        control_subscription;
+        waypoint_command_subscription;
 
     // Heartbeat
     static constexpr uint16_t heartbeat_period_ms =
@@ -257,7 +257,8 @@ class MissionControl : public common_lib::CommonNode {
     void mission_finished();
 
     // Fail-Safe checks
-    void check_control(const interfaces::msg::UAVWaypointCommand &msg);
+    void waypoint_command_callback(
+        const interfaces::msg::UAVWaypointCommand &msg);
 
     // Heartbeat
     void heartbeat_callback(const interfaces::msg::Heartbeat &msg);
