@@ -226,7 +226,9 @@ void MissionControl::cancel_wait() {
  * @brief Get the string representation of the current mission state.
  *
  * This function returns the string representation of the current mission state.
- * The mission state is obtained using the `get_mission_state()` function.
+ *
+ * @note This is a wrapper for the `get_mission_state()` function, providing the
+ * current mission state.
  *
  * @return const char* The string representation of the mission state.
  *
