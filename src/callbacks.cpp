@@ -151,7 +151,8 @@ void MissionControl::waypoint_command_callback(
     // Check that sender is allowed to send on the topic
     if (msg.sender_id != get_active_node_id()) {
         // Check timestamp: If it is too old, ingore message as sender might
-        // have been allowed to send at that time
+        // have been allowed to send at that time (defined by
+        // 'max_waypoint_command_msg_time_difference_ms' constant)
         if (timestamp_now - rclcpp::Time(msg.time_stamp) >
             rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
                 max_waypoint_command_msg_time_difference_ms))) {
@@ -319,7 +320,8 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     }
     heartbeat.tick = msg.tick;
 
-    // Check timestamp
+    // Check if timestamp is too old (defined by
+    // 'heartbeat_max_timestamp_age_ms' constant)
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             heartbeat_max_timestamp_age_ms))) {
@@ -432,7 +434,8 @@ void MissionControl::position_callback(
                  __func__, msg.sender_id.c_str(), msg.latitude_deg,
                  msg.longitude_deg, msg.relative_altitude_m);
 
-    // Check timestamp
+    // Check if timestamp is too old (defined by
+    // 'max_position_msg_time_difference_ms' constant)
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             max_position_msg_time_difference_ms))) {
@@ -491,7 +494,8 @@ void MissionControl::mission_progress_callback(
                  "progress from '%s': progress: %f / 1.0",
                  __func__, msg.sender_id.c_str(), msg.progress);
 
-    // Check timestamp
+    // Check if timestamp is too old (defined by
+    // 'max_progress_msg_time_difference_ms' constant)
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             max_progress_msg_time_difference_ms))) {
@@ -528,7 +532,8 @@ void MissionControl::flight_state_callback(
                  __func__, msg.sender_id.c_str(), msg.mode.mode,
                  msg.state.state);
 
-    // Check timestamp
+    // Check if timestamp is too old (defined by
+    // 'max_flight_state_msg_time_difference_ms' constant)
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             max_flight_state_msg_time_difference_ms))) {
@@ -571,7 +576,8 @@ void MissionControl::health_callback(const interfaces::msg::UAVHealth &msg) {
         msg.is_local_position_ok, msg.is_global_position_ok,
         msg.is_home_position_ok, msg.is_armable);
 
-    // Check timestamp
+    // Check if timestamp is too old (defined by
+    // 'max_health_msg_time_difference_ms' constant)
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
         rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
             max_health_msg_time_difference_ms))) {
