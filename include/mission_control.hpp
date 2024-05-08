@@ -165,7 +165,8 @@ class MissionControl : public common_lib::CommonNode {
              //!< message and current time
     bool heartbeat_received_all =
         false;  //!< true if all heartbeats we're received in the last
-                //!< timeframe, otherwise false
+                //!< timeframe and the nodes are in there correct states,
+                //!< otherwise false
     rclcpp::TimerBase::SharedPtr heartbeat_timer;
     rclcpp::Subscription<interfaces::msg::Heartbeat>::SharedPtr
         heartbeat_subscription;

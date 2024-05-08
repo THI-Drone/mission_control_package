@@ -351,11 +351,14 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
  * aborted.
  */
 void MissionControl::heartbeat_timer_callback() {
-    bool err_flag = false;
+    bool err_flag = false;  // If set to true, a heartbeat was not received or a
+                            // node was in an incorrect state
 
     for (auto &nm : node_map) {
+        // Create local reference for easier access
         heartbeat_payload &hp = nm.second.hb_payload;
 
+        // Check if no heartbeat was received
         if (hp.received == false) {
             err_flag = true;
             RCLCPP_ERROR(this->get_logger(),
@@ -364,20 +367,28 @@ void MissionControl::heartbeat_timer_callback() {
                          __func__, nm.first.c_str());
         }
 
+        // Check for FCC Bridget that the active flag is set to true
         if (nm.second.is_fcc_bridge && !nm.second.hb_payload.active) {
             err_flag = true;
+            // Log an error if the FCC bridge is not active but required for the
+            // mission
             RCLCPP_ERROR(this->get_logger(),
                          "MissionControl::%s: Node '%s' "
                          "is not active but this is required for the mission!",
                          __func__, nm.first.c_str());
         }
 
+        // Deactivate the received flag for the next heartbeat intervall
         hp.received = false;
     }
 
+    // Set the global variable to let the selfcheck mode know, that all the
+    // heartbeats were received and all the nodes are in their correct states
     heartbeat_received_all = !err_flag;
 
+    // Check if all heartbeats were received
     if (heartbeat_received_all) {
+        // Log a debug message if all heartbeats are received
         RCLCPP_DEBUG(this->get_logger(),
                      "MissionControl::%s: All heartbeats "
                      "received",
@@ -385,6 +396,10 @@ void MissionControl::heartbeat_timer_callback() {
     } else {
         if (get_mission_state() != selfcheck &&
             get_mission_state() != prepare_mission) {
+            // Abort the mission if a heartbeat is missing or the FCC bridge is
+            // not active while not in 'selfcheck' or 'prepare_mission' state.
+            // During these two phases, the ros network is still starting up and
+            // therefore not all nodes have to be active at that time.
             mission_abort(
                 "MissionControl::" + (std::string) __func__ +
                 ": Missing heartbeat or FCC bridge not active while not in "
