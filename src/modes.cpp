@@ -32,7 +32,7 @@ void MissionControl::mode_prepare_mission() {
  *
  * This function is responsible for initiating the takeoff procedure of the
  * drone. It performs several checks to ensure that the drone is in the correct
- * state and has is currently inside the geofence before sending the takeoff
+ * state and is currently inside the geofence before sending the takeoff
  * command.
  */
 void MissionControl::initiate_takeoff() {
