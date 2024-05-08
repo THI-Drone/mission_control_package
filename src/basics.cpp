@@ -1,5 +1,20 @@
 #include "mission_control.hpp"
 
+/**
+ * @brief A macro that maps an enum member to its string representation.
+ *
+ * This macro is used to create a case statement in an enum-to-string function.
+ * It takes an enum member as an argument, and returns the string representation
+ * of that member. The `#` operator is used to stringify the provided argument.
+ *
+ * Usage:
+ * switch (enumValue) {
+ *     ENUM_TO_STR(EnumMember);
+ *     ...
+ * }
+ *
+ * @param member The enum member to be converted to a string.
+ */
 #define ENUM_TO_STR(member) \
     case member:            \
         return #member
