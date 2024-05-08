@@ -143,6 +143,13 @@ class MissionDefinitionReader {
      */
     void read_file(const std::string &file_path, const bool dry_run);
 
+    /**
+     * @brief Get the safety settings.
+     *
+     * This function returns the safety settings.
+     *
+     * @return The safety settings.
+     */
     safety get_safety_settings() const { return safety_settings; }
 
     /**
