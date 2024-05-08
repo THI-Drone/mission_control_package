@@ -325,7 +325,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
             heartbeat_max_timestamp_age_ms))) {
         RCLCPP_FATAL(get_logger(),
                      "MissionControl::%s: Received too old "
-                     "timestamp: %s",
+                     "timestamp from: %s",
                      __func__, msg.sender_id.c_str());
         mission_abort(
             "MissionControl::" + (std::string) __func__ +
