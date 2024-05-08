@@ -159,7 +159,7 @@ void MissionControl::waypoint_command_callback(
             RCLCPP_ERROR(get_logger(),
                          "MissionControl::%s: Received too "
                          "old timestamp in waypoint command message from '%s' "
-                         "from that is currently not allowed to send. "
+                         "that is currently not allowed to send. "
                          "Currently allowed node: '%s'",
                          __func__, msg.sender_id.c_str(),
                          get_active_node_id().c_str());
