@@ -204,7 +204,8 @@ bool MissionControl::wait_time_finished() {
 }
 
 /**
- * @brief Cancels the current wait time and sets the flag to false.
+ * @brief Cancels the current wait time and sets the `wait_time_finished_ok`
+ * flag to false.
  *
  * This function cancels the current timer used for waiting and sets the
  * `wait_time_finished_ok` flag to false. It is used to cancel the wait time
