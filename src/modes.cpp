@@ -79,7 +79,7 @@ void MissionControl::initiate_takeoff() {
 
         // Wait for a predefined time before sending waypoint command to avoid
         // confusion
-        init_wait(wait_time_between_msgs);
+        init_wait(wait_time_between_msgs_ms);
     }
 
     if (wait_time_finished()) {

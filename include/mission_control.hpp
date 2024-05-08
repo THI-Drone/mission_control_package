@@ -75,44 +75,53 @@ class MissionControl : public common_lib::CommonNode {
         "";  //!< node_id that is currently allowed to send data to the FCC
              //!< interface, set to "" if none is allowed
 
-    size_t current_command_id = 0;
+    size_t current_command_id =
+        0;  //!< Index pointing to the currently active command in `commands`
     std::vector<mission_file_lib::command>
         commands;  //!< Storage for current commands that
                    //!< will be executed one by one
 
     Position home_position;     //!< Storage for takeoff position
-    Position current_position;  //!< Current position of the drone
+    Position current_position;  //!< Current position of the drone as published
+                                //!< in `GPSPosition.msg`
 
     uint8_t current_flight_mode =
         interfaces::msg::FlightMode::UNKNOWN;  //!< Current flight mode of the
                                                //!< drone as published in
-                                               //!< FlightState
+                                               //!< `FlightState.msg`
 
     uint8_t current_landed_state =
         interfaces::msg::LandedState::UNKNOWN;  //!< Current landed state of the
                                                 //!< drone as published in
-                                                //!< FlightState
+                                                //!< `FlightState.msg`
 
     bool drone_health_ok =
         false;  //!< True if all of the health indicators in the UAVHealth.msg
                 //!< are ok, otherwise false
 
     // Wait Time
-    static constexpr uint16_t wait_time_between_msgs =
+    static constexpr uint16_t wait_time_between_msgs_ms =
         50;  //!< Wait time between messages in ms to avoid confusion
     bool wait_time_finished_ok =
         false;  //!< True if wait time finished, otherwise false
     rclcpp::TimerBase::SharedPtr wait_time_timer;
 
     // Mission Definition File
-    mission_file_lib::MissionDefinitionReader mission_definition_reader;
-    std::unordered_set<std::string> executed_marker_names;
+    mission_file_lib::MissionDefinitionReader
+        mission_definition_reader;  //!< Reader and storage of the mission
+                                    //!< definition file's contents
+    std::unordered_set<std::string>
+        executed_marker_names;  //!< Set of marker names that were already
+                                //!< executed, to prevent duplicate same marker
+                                //!< executions
 
     // Mission Progress
-    float mission_progress = 0.0;
+    float mission_progress =
+        0.0;  //!< Current mission progress as received by FCC Bridge
 
     // Event Loop
-    const uint32_t event_loop_time_delta_ms = 100;
+    const uint32_t event_loop_time_delta_ms =
+        100;  //!< Interval in which the Event Loop is triggered
     bool event_loop_active =
         true;  //!< If set to true, the event loop will be executed periodically
     rclcpp::TimerBase::SharedPtr event_loop_timer;
