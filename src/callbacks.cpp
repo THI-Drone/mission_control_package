@@ -440,6 +440,10 @@ void MissionControl::position_callback(
         // are
         current_position = Position();
 
+        // Check if Mission Control is currently active and thereby sending
+        // commands to the FCC Bridge (e.g. during takeoff). If this is the
+        // case, the position needs to be reliable and therefore a mission abort
+        // will be triggered.
         if (this->get_active()) {
             RCLCPP_FATAL(get_logger(),
                          "WaypointNode::%s: Received too old "
