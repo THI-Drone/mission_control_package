@@ -47,10 +47,11 @@ void MissionControl::job_finished_callback(
     // Ignore message if sender node is not active as this might be a delayed
     // message or a programming error in the sender node
     if (msg.sender_id != get_active_node_id()) {
-        RCLCPP_WARN(this->get_logger(),
-                    "MissionControl::%s: Got a successfull "
-                    "job_finished message from an inactive node: %s",
-                    __func__, msg.sender_id.c_str());
+        RCLCPP_WARN(
+            this->get_logger(),
+            "MissionControl::%s: Got a successfull "
+            "job_finished message from an inactive node: %s. Ignoring message.",
+            __func__, msg.sender_id.c_str());
         return;
     }
 
