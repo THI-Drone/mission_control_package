@@ -150,6 +150,10 @@ nlohmann::json MissionControl::get_job_finished_payload() {
 /**
  * Checks if the current mission is finished.
  *
+ * Additionally, the `mission_progress` is reset to 0.0, to make sure that the
+ * next mission doesn't wrongly assume it is already finished, because of the
+ * cached 1.0 value.
+ *
  * @return true if the mission is finished, false otherwise.
  */
 bool MissionControl::current_mission_finished() {
