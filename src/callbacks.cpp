@@ -258,6 +258,8 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     // Throw away own heartbeat
     if (msg.sender_id == get_name()) return;
 
+    // Check if the sender id of the heartbeat is known, otherwise log error and
+    // ignore message
     if (node_map.find(msg.sender_id) == node_map.end()) {
         RCLCPP_ERROR(get_logger(),
                      "MissionControl::%s: Received unregistered "
