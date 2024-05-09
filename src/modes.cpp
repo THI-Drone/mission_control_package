@@ -357,10 +357,29 @@ void MissionControl::mode_self_check() {
 
     const uint32_t max_wait_time = (30 * 1000) / event_loop_time_delta_ms;
     if (i % (1000 / event_loop_time_delta_ms) == 0) {
+        // Creating helpful log message
+        std::vector<std::string> missing_conditions = {};
+        if (!heartbeat_received_all) missing_conditions.push_back("heartbeats");
+        if (!drone_health_ok) missing_conditions.push_back("drone health");
+        if (current_landed_state != interfaces::msg::LandedState::ON_GROUND)
+            missing_conditions.push_back("drone on ground");
+
+        std::string missing_conditions_str = "";
+        {
+            size_t i = 0;
+
+            for (const auto &mc : missing_conditions) {
+                if (i > 0) missing_conditions_str += ", ";
+                missing_conditions_str += mc;
+                i++;
+            }
+        }
+
         RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Waiting for heartbeats: "
+                    "MissionControl::%s: Waiting for: [%s]: "
                     "%us / %us",
-                    __func__, (i * event_loop_time_delta_ms) / 1000,
+                    __func__, missing_conditions_str.c_str(),
+                    (i * event_loop_time_delta_ms) / 1000,
                     (max_wait_time * event_loop_time_delta_ms) / 1000);
     }
 
