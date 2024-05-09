@@ -139,12 +139,6 @@ void MissionControl::mode_decision_maker() {
     RCLCPP_INFO(this->get_logger(),
                 "MissionControl::%s: Decision Maker started", __func__);
 
-    RCLCPP_INFO(this->get_logger(),
-                "MissionControl::%s: active_marker_name: "
-                "'%s', current_command_id: %ld, command count: %ld",
-                __func__, get_active_marker_name().c_str(), current_command_id,
-                commands.size());
-
     // Check if there are commands left that need to be executed
     if (commands.size() > 0 && current_command_id < commands.size() - 1) {
         current_command_id++;  // move command id one further
@@ -183,6 +177,13 @@ void MissionControl::mode_decision_maker() {
                           (std::string)e.what());
         }
     }
+
+    // Log current status
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::%s: active_marker_name: "
+                "'%s', current_command_id: %ld, command count: %ld",
+                __func__, get_active_marker_name().c_str(), current_command_id,
+                commands.size());
 
     // Check if command list is empty
     if (commands.size() <= 0)
