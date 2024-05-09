@@ -455,6 +455,13 @@ void MissionControl::mode_check_drone_configuration() {
                     "drone configuration started",
                     __func__);
         set_standby_config();
+
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Waiting for landed state '%u' "
+                    "(currently: '%u') and flight mode '%u' (currently: '%u')",
+                    __func__, interfaces::msg::LandedState::ON_GROUND,
+                    current_landed_state, interfaces::msg::FlightMode::READY,
+                    current_flight_mode);
     }
 
     // Check that FCC is in 'READY' state and drone is on ground
