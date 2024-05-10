@@ -293,7 +293,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                             "MissionDefinitionReader::%s: "
                             "[MARKERS::COMMAND] Checking that "
                             "the waypoint is inside of the geofence: lat: %f, "
-                            "lon :%f\n",
+                            "lon: %f\n",
                             __func__, point.at(0), point.at(1));
 
                         if (!safety_settings.check_in_geofence(point)) {
