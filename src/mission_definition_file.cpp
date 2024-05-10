@@ -147,7 +147,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
             // Check that point is unique
             for (const auto &gp : geofence_points) {
                 if (gp.at(0) == geofence_point_pair.at(0) &&
-                    gp.at(0) == geofence_point_pair.at(1)) {
+                    gp.at(1) == geofence_point_pair.at(1)) {
                     throw std::runtime_error(
                         "MissionDefinitionReader::" + (std::string) __func__ +
                         ": [SAFETY] Geofence "
