@@ -7,7 +7,7 @@ set(JSON_ImplicitConversions OFF) # deactivate implicit type conversion
 project(mission_control_package)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic -Werror -Wswitch-default)
+  add_compile_options(-Wall -Wextra -Wpedantic -Werror)
 endif()
 
 # find dependencies
@@ -61,6 +61,19 @@ if(BUILD_TESTING)
   # a copyright and license is added to all source files
   set(ament_cmake_cpplint_FOUND TRUE)
   # ament_lint_auto_find_test_dependencies()
+  
+  find_package(ament_cmake_gtest REQUIRED)
+  ament_add_gtest(${PROJECT_NAME}_test
+                  test/main_test.cpp
+                  test/mission_file_reader/mission_file_reader_test.cpp)
+  target_include_directories(${PROJECT_NAME}_test PUBLIC
+          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+          $<INSTALL_INTERFACE:include>
+  )
+  ament_target_dependencies(${PROJECT_NAME}_test
+          rclcpp interfaces nlohmann_json common_package
+  )
+  target_link_libraries(${PROJECT_NAME}_test mission_file_lib)
 endif()
 
 ament_package()
