@@ -200,10 +200,11 @@ TEST(mission_control_package, file_format_test) {
     {
         // Test correct json file with only an "init" marker
         MissionDefinitionReader mdr;
-        ASSERT_NO_THROW(mdr.read_file("../../src/mission_control_package/test/"
-                                   "mission_file_reader/test_assets/"
-                                   "mdf_correct_init_only.json",
-                                   true));
+        ASSERT_NO_THROW(
+            mdr.read_file("../../src/mission_control_package/test/"
+                          "mission_file_reader/test_assets/"
+                          "mdf_correct_init_only.json",
+                          true));
     }
 }
 
