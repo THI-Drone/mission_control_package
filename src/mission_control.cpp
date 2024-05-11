@@ -227,10 +227,11 @@ void MissionControl::mission_abort(std::string reason) {
     RCLCPP_FATAL(this->get_logger(),
                  "MissionControl::%s: Aborting mission, reason: %s", __func__,
                  reason.c_str());
-    RCLCPP_FATAL(this->get_logger(), "MissionControl::%s: Last active node: %s",
-                 __func__, get_active_node_id().c_str());
-    RCLCPP_FATAL(this->get_logger(), "MissionControl::%s: Internal state: '%s'",
-                 __func__, get_mission_state_str());
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::%s: Last active node: '%s'", __func__,
+                get_active_node_id().c_str());
+    RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Internal state: '%s'",
+                __func__, get_mission_state_str());
 
     // Reset internal state
     clear_active_node_id();
