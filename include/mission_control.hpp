@@ -72,6 +72,10 @@ class MissionControl : public common_lib::CommonNode {
                //!< get_state_first_loop().
     std::map<std::string, ros_node>
         node_map;  //!< Has an entry for every ros node
+    bool probation_period =
+        false;  //!< If set to true, the active node id has been set in the last
+                //!< heartbeat period. During this time, the mission will not be
+                //!< aborted if an active state is not correct.
     std::string active_node_id =
         "";  //!< node_id that is currently allowed to send data to the FCC
              //!< interface, set to "" if none is allowed

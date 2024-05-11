@@ -65,6 +65,8 @@ void MissionControl::set_active_node_id(std::string node_id) {
     RCLCPP_DEBUG(this->get_logger(),
                  "MissionControl::%s: Set active_node_id to %s", __func__,
                  node_id.c_str());
+
+    probation_period = true;
     active_node_id = node_id;
 }
 
@@ -92,6 +94,8 @@ void MissionControl::set_active_marker_name(
 void MissionControl::clear_active_node_id() {
     RCLCPP_DEBUG(this->get_logger(),
                  "MissionControl::%s: Cleared active node id", __func__);
+
+    probation_period = true;
     active_node_id = "";
 }
 

@@ -288,22 +288,38 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     } else {
         // Check that active state matches the internal state
         if (msg.active && (msg.sender_id != get_active_node_id())) {
-            RCLCPP_FATAL(get_logger(),
-                         "MissionControl::%s: Node '%s' is active even "
-                         "though it should be deactive",
-                         __func__, msg.sender_id.c_str());
-            mission_abort("MissionControl::" + (std::string) __func__ +
-                          ": Node '" + msg.sender_id +
-                          "' was active even though it should be deactive");
+            if (probation_period) {
+                RCLCPP_ERROR(get_logger(),
+                             "MissionControl::%s: Node '%s' is active even "
+                             "though it should be deactive. Ignoring this fact "
+                             "because of the probation period.",
+                             __func__, msg.sender_id.c_str());
+            } else {
+                RCLCPP_FATAL(get_logger(),
+                             "MissionControl::%s: Node '%s' is active even "
+                             "though it should be deactive",
+                             __func__, msg.sender_id.c_str());
+                mission_abort("MissionControl::" + (std::string) __func__ +
+                              ": Node '" + msg.sender_id +
+                              "' was active even though it should be deactive");
+            }
         }
         if ((!msg.active) && (msg.sender_id == get_active_node_id())) {
-            RCLCPP_FATAL(get_logger(),
-                         "MissionControl::%s: Node '%s' is deactive "
-                         "even though it should be active",
-                         __func__, msg.sender_id.c_str());
-            mission_abort("MissionControl::" + (std::string) __func__ +
-                          ": Node '" + msg.sender_id +
-                          "' was deactive even though it should be active");
+            if (probation_period) {
+                RCLCPP_ERROR(get_logger(),
+                             "MissionControl::%s: Node '%s' is deactive even "
+                             "though it should be active. Ignoring this fact "
+                             "because of the probation period.",
+                             __func__, msg.sender_id.c_str());
+            } else {
+                RCLCPP_FATAL(get_logger(),
+                             "MissionControl::%s: Node '%s' is deactive "
+                             "even though it should be active",
+                             __func__, msg.sender_id.c_str());
+                mission_abort("MissionControl::" + (std::string) __func__ +
+                              ": Node '" + msg.sender_id +
+                              "' was deactive even though it should be active");
+            }
         }
     }
 
@@ -354,6 +370,8 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
 void MissionControl::heartbeat_timer_callback() {
     bool err_flag = false;  // If set to true, a heartbeat was not received or a
                             // node was in an incorrect state
+
+    probation_period = false;
 
     for (auto &nm : node_map) {
         // Create local reference for easier access
