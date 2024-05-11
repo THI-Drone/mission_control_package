@@ -237,12 +237,12 @@ void MissionControl::mission_abort(std::string reason) {
     // empty)
     if (get_active_node_id().size() > 0 &&
         get_active_node_id() != this->get_name()) {
-        send_control(get_active_node_id(), false, "");
-
         RCLCPP_INFO(
             this->get_logger(),
             "MissionControl::%s: Explicitly deactivated active node: '%s'",
             __func__, get_active_node_id().c_str());
+
+        send_control(get_active_node_id(), false, "{}");
     }
 
     // Reset internal state
@@ -282,12 +282,12 @@ void MissionControl::mission_finished() {
     // empty)
     if (get_active_node_id().size() > 0 &&
         get_active_node_id() != this->get_name()) {
-        send_control(get_active_node_id(), false, "");
-
         RCLCPP_INFO(
             this->get_logger(),
             "MissionControl::%s: Explicitly deactivated active node: '%s'",
             __func__, get_active_node_id().c_str());
+
+        send_control(get_active_node_id(), false, "{}");
     }
 
     // Reset internal state
