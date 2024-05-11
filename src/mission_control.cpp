@@ -18,6 +18,11 @@ MissionControl::MissionControl(const rclcpp::NodeOptions &options)
                         "MissionControl::%s: Using default Mission Definition "
                         "File at: '%s'",
                         __func__, mdf_default_file_path.c_str());
+        } else {
+            RCLCPP_INFO(this->get_logger(),
+                        "MissionControl::%s: Using custom Mission Definition "
+                        "File at: '%s'",
+                        __func__, mdf_file_path.c_str());
         }
     } catch (const rclcpp::exceptions::InvalidParameterTypeException &e) {
         // Parameter is not a string
