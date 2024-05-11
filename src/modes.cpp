@@ -45,8 +45,8 @@ void MissionControl::initiate_takeoff() {
         this->activate();
         set_active_node_id(this->get_name());
 
-        // Check that drone is in 'READY' state and landed state is 'ON_GROUND'
-        if (current_flight_mode != interfaces::msg::FlightMode::READY ||
+        // Check that drone is in 'HOLD' state and landed state is 'ON_GROUND'
+        if (current_flight_mode != interfaces::msg::FlightMode::HOLD ||
             current_landed_state != interfaces::msg::LandedState::ON_GROUND) {
             RCLCPP_FATAL(this->get_logger(),
                          "MissionControl::%s: Drone is not in "
@@ -56,7 +56,7 @@ void MissionControl::initiate_takeoff() {
 
             mission_abort(
                 "MissionControl::" + (std::string) __func__ +
-                ": Drone is not in 'READY' "
+                ": Drone is not in 'HOLD' "
                 "flight mode or not on the ground. Current flight mode: " +
                 std::to_string(current_flight_mode) +
                 ", Current landed state: " +
@@ -499,13 +499,13 @@ void MissionControl::mode_check_drone_configuration() {
                     "MissionControl::%s: Waiting for landed state '%u' "
                     "(currently: '%u') and flight mode '%u' (currently: '%u')",
                     __func__, interfaces::msg::LandedState::ON_GROUND,
-                    current_landed_state, interfaces::msg::FlightMode::READY,
+                    current_landed_state, interfaces::msg::FlightMode::HOLD,
                     current_flight_mode);
     }
 
-    // Check that FCC is in 'READY' state and drone is on ground
+    // Check that FCC is in 'HOLD' state and drone is on ground
     if (current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
-        current_flight_mode == interfaces::msg::FlightMode::READY) {
+        current_flight_mode == interfaces::msg::FlightMode::HOLD) {
         // Check that current position is in geofence
         if (!mission_definition_reader.check_in_geofence(
                 current_position.get_position_array())) {
