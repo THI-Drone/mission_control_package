@@ -176,7 +176,7 @@ bool MissionControl::current_mission_finished() {
  *
  * @param wait_time_ms The wait time in milliseconds.
  */
-void MissionControl::init_wait(uint16_t wait_time_ms) {
+void MissionControl::init_wait(uint32_t wait_time_ms) {
     wait_time_finished_ok = false;
 
     // Initialize Wait Time Timer

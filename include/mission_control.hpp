@@ -215,7 +215,7 @@ class MissionControl : public common_lib::CommonNode {
     nlohmann::json get_job_finished_payload();
 
     // Wait time
-    void init_wait(uint16_t wait_time_ms);
+    void init_wait(uint32_t wait_time_ms);
     bool wait_time_finished();
     void cancel_wait();
     void callback_wait_time();

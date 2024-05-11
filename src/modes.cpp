@@ -221,6 +221,11 @@ void MissionControl::mode_decision_maker() {
  * @note This function ignores `job_finished_payload` as it is not relevant.
  */
 void MissionControl::mode_fly_to_waypoint() {
+    // Maximum time before waypoint must be reached, otherwise a mission abort
+    // will be triggered
+    constexpr uint32_t max_allowed_time_to_waypoint_ms =
+        2 /* min */ * 60 * 1000;
+
     if (get_state_first_loop()) {
         RCLCPP_INFO(this->get_logger(),
                     "MissionControl::%s: Activating waypoint node", __func__);
@@ -240,10 +245,41 @@ void MissionControl::mode_fly_to_waypoint() {
         // Activate Waypoint Node and send the command data as payload
         send_control_json("waypoint_node", true,
                           commands.at(current_command_id).data);
+
+        // Calculate timeout
+        uint32_t timeout_ms = max_allowed_time_to_waypoint_ms;
+        if (commands.at(current_command_id).data.contains("pre_wait_time_ms")) {
+            timeout_ms += commands.at(current_command_id)
+                              .data.at("pre_wait_time_ms")
+                              .get<uint32_t>();
+        }
+
+        if (commands.at(current_command_id).data.contains("pre_wait_time_ms")) {
+            timeout_ms += commands.at(current_command_id)
+                              .data.at("post_wait_time_ms")
+                              .get<uint32_t>();
+        }
+
+        // Start timeout timer
+        init_wait(timeout_ms);
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Timeout timer started: %u ms "
+                    "(= %f s)",
+                    __func__, timeout_ms, timeout_ms / 1000.0);
+    }
+
+    if (wait_time_finished()) {
+        // Timeout reached, aborting mission
+        mission_abort("MissionControl::" + (std::string) __func__ +
+                      ": Timeout reached without "
+                      "arriving at waypoint");
     }
 
     // If job finished, return to decision maker for next command
     if (get_job_finished_successfully()) {
+        // Cancel timeout timer
+        cancel_wait();
+
         RCLCPP_INFO(this->get_logger(),
                     "MissionControl::%s: Job finished "
                     "successfully. Set mission state to 'decision_maker'.",
