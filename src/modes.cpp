@@ -469,6 +469,10 @@ void MissionControl::mode_self_check() {
             msg.geofence_points = geofence_points;
 
             safety_limits_publisher->publish(msg);
+
+            RCLCPP_INFO(this->get_logger(),
+                        "MissionControl::%s: Sent safety limits to FCC bridge",
+                        __func__);
         }
 
         RCLCPP_INFO(this->get_logger(),
