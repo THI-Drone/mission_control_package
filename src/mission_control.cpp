@@ -14,10 +14,10 @@ MissionControl::MissionControl(const rclcpp::NodeOptions &options)
             "MDF_FILE_PATH", mdf_default_file_path);
 
         if (mdf_file_path == mdf_default_file_path) {
-            RCLCPP_WARN(
-                this->get_logger(),
-                "MissionControl::%s: Using default Mission Definition File",
-                __func__);
+            RCLCPP_WARN(this->get_logger(),
+                        "MissionControl::%s: Using default Mission Definition "
+                        "File at: '%s'",
+                        __func__, mdf_default_file_path.c_str());
         }
     } catch (const rclcpp::exceptions::InvalidParameterTypeException &e) {
         // Parameter is not a string
