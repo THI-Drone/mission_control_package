@@ -117,11 +117,10 @@ void MissionControl::mission_start(const interfaces::msg::MissionStart &msg) {
     set_active_marker_name("init");
 
     // Start mission
-    RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Mission started",
-                __func__);
     set_mission_state(takeoff);
-    RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Takeoff initiated",
-                __func__);
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::%s: Mission started. New state: '%s'",
+                __func__, get_mission_state_str());
 }
 
 /**
