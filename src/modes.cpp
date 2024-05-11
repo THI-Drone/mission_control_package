@@ -10,10 +10,8 @@ void MissionControl::mode_prepare_mission() {
                     "MissionControl::%s: Prepare mission started", __func__);
         set_standby_config();
 
-        std::string file_path =
-            "src/mission_control_package/assets/mission_test.json";
         try {
-            mission_definition_reader.read_file(file_path, false);
+            mission_definition_reader.read_file(mdf_file_path, false);
         } catch (const std::runtime_error &e) {
             mission_abort("MissionControl::" + (std::string) __func__ +
                           ": Failed to read mission "
