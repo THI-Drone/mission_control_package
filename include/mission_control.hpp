@@ -15,6 +15,7 @@
 #include "common_package/topic_names.hpp"
 #include "event_loop_guard.hpp"
 #include "mission_definition_file.hpp"
+#include "rclcpp/node_options.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "structs.hpp"
 
@@ -107,6 +108,8 @@ class MissionControl : public common_lib::CommonNode {
     rclcpp::TimerBase::SharedPtr wait_time_timer;
 
     // Mission Definition File
+    std::string mdf_file_path =
+        "";  //!< File path of the mission definition file
     mission_file_lib::MissionDefinitionReader
         mission_definition_reader;  //!< Reader and storage of the mission
                                     //!< definition file's contents
@@ -198,7 +201,7 @@ class MissionControl : public common_lib::CommonNode {
         health_subscription;
 
    public:
-    MissionControl();
+    MissionControl(const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
 
    private:
     // Event Loop

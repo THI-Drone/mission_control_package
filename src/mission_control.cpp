@@ -2,7 +2,34 @@
 
 using std::placeholders::_1;
 
-MissionControl::MissionControl() : CommonNode("mission_control") {
+MissionControl::MissionControl(const rclcpp::NodeOptions &options)
+    : CommonNode("mission_control", options) {
+    // Path to mission definition file
+    try {
+        const std::string mdf_default_file_path =
+            "src/mission_control_package/assets/mission_test.json";
+
+        // Try to read parameter
+        mdf_file_path = this->declare_parameter<std::string>(
+            "MDF_FILE_PATH", mdf_default_file_path);
+
+        if (mdf_file_path == mdf_default_file_path) {
+            RCLCPP_WARN(
+                this->get_logger(),
+                "MissionControl::%s: Using default Mission Definition File",
+                __func__);
+        }
+    } catch (const rclcpp::exceptions::InvalidParameterTypeException &e) {
+        // Parameter is not a string
+        RCLCPP_FATAL(this->get_logger(),
+                     "MissionControl::%s: 'MDF_FILE_PATH' parameter is of "
+                     "wrong type. Expected string.",
+                     __func__);
+
+        mission_abort(
+            "'MDF_FILE_PATH' parameter is of wrong type. Expected string.");
+    }
+
     // Register nodes
     const std::string node_names[] = {"waypoint_node", "fcc_bridge",
                                       "qr_code_scanner_node"};
