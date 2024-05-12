@@ -66,7 +66,12 @@ void MissionControl::set_active_node_id(std::string node_id) {
                  "MissionControl::%s: Set active_node_id to %s", __func__,
                  node_id.c_str());
 
+    // Init and start probation period
     probation_period = true;
+    last_active_node_id = active_node_id;
+    start_probation_period();
+
+    // Set active node
     active_node_id = node_id;
 }
 
@@ -95,8 +100,36 @@ void MissionControl::clear_active_node_id() {
     RCLCPP_DEBUG(this->get_logger(),
                  "MissionControl::%s: Cleared active node id", __func__);
 
+    // Init and start probation period
     probation_period = true;
+    last_active_node_id = active_node_id;
+    start_probation_period();
+
+    // Set active node
     active_node_id = "";
+}
+
+/**
+ * @brief Starts the probation period for the mission control.
+ *
+ * This function starts the probation period for the mission control by creating
+ * a timer with the specified probation period length. The old timer is canceled
+ * before starting the new timer.
+ */
+void MissionControl::start_probation_period() {
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::%s: Starting probation period for '%u' ms "
+                 "and last_active_node_id: '%s'",
+                 __func__, probation_period_length_ms,
+                 last_active_node_id.c_str());
+
+    // Cancel old timer
+    if (probation_period_timer) probation_period_timer->cancel();
+
+    // Start new timer
+    probation_period_timer = this->create_wall_timer(
+        std::chrono::milliseconds(probation_period_length_ms),
+        std::bind(&MissionControl::probation_period_timer_callback, this));
 }
 
 /**

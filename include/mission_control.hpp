@@ -72,10 +72,6 @@ class MissionControl : public common_lib::CommonNode {
                //!< get_state_first_loop().
     std::map<std::string, ros_node>
         node_map;  //!< Has an entry for every ros node
-    bool probation_period =
-        false;  //!< If set to true, the active node id has been set in the last
-                //!< heartbeat period. During this time, the mission will not be
-                //!< aborted if an active state is not correct.
     std::string active_node_id =
         "";  //!< node_id that is currently allowed to send data to the FCC
              //!< interface, set to "" if none is allowed
@@ -103,6 +99,19 @@ class MissionControl : public common_lib::CommonNode {
     bool drone_health_ok =
         false;  //!< True if all of the health indicators in the UAVHealth.msg
                 //!< are ok, otherwise false
+
+    // Probation period
+    const uint32_t probation_period_length_ms =
+        50;  //!< Length of the probation time in ms
+    bool probation_period =
+        false;  //!< If set to true, the active node id has been set in the last
+                //!< heartbeat period. During this time, the mission will not be
+                //!< aborted if an active state is not correct.
+    std::string last_active_node_id =
+        "";  //!< node_id that is still allowed to send data to the FCC
+             //!< interface during `probation_period`, set to "" if none is
+             //!< allowed
+    rclcpp::TimerBase::SharedPtr probation_period_timer;
 
     // Wait Time
     static constexpr uint16_t wait_time_between_msgs_ms =
@@ -234,6 +243,12 @@ class MissionControl : public common_lib::CommonNode {
     void set_active_node_id(std::string node_id);
     void clear_active_node_id();
     std::string get_active_node_id() const { return active_node_id; }
+
+    // Probation Period
+    std::string get_last_active_node_id() const { return last_active_node_id; }
+    constexpr bool get_probation_period() const { return probation_period; }
+    void start_probation_period();
+    void probation_period_timer_callback();
 
     // Active Marker
     void set_active_marker_name(const std::string &new_active_marker_name);

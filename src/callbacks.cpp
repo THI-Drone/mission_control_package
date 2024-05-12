@@ -172,6 +172,23 @@ void MissionControl::waypoint_command_callback(
             return;
         }
 
+        // Check if sender is in probation period
+        if (get_probation_period() &&
+            msg.sender_id == get_last_active_node_id()) {
+            // Sending error message and don't abort the mission
+            RCLCPP_ERROR(
+                get_logger(),
+                "MissionControl::%s: The node '%s' sent a message on the "
+                "'%s' topic, but it is not allowed to do so. "
+                "Currently allowed node: '%s'. This fact is ignored because of "
+                "the probation period.",
+                __func__, msg.sender_id.c_str(),
+                common_lib::topic_names::UAVWaypointCommand,
+                get_active_node_id().c_str());
+
+            return;
+        }
+
         RCLCPP_FATAL(get_logger(),
                      "MissionControl::%s: The node '%s' sent a message on the "
                      "'%s' topic, but it is not allowed to do so. "
@@ -288,7 +305,8 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     } else {
         // Check that active state matches the internal state
         if (msg.active && (msg.sender_id != get_active_node_id())) {
-            if (probation_period) {
+            if (get_probation_period() &&
+                msg.sender_id == get_last_active_node_id()) {
                 RCLCPP_ERROR(get_logger(),
                              "MissionControl::%s: Node '%s' is active even "
                              "though it should be deactive. Ignoring this fact "
@@ -305,7 +323,8 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
             }
         }
         if ((!msg.active) && (msg.sender_id == get_active_node_id())) {
-            if (probation_period) {
+            if (get_probation_period() &&
+                msg.sender_id == get_last_active_node_id()) {
                 RCLCPP_ERROR(get_logger(),
                              "MissionControl::%s: Node '%s' is deactive even "
                              "though it should be active. Ignoring this fact "
@@ -371,8 +390,6 @@ void MissionControl::heartbeat_timer_callback() {
     bool err_flag = false;  // If set to true, a heartbeat was not received or a
                             // node was in an incorrect state
 
-    probation_period = false;
-
     for (auto &nm : node_map) {
         // Create local reference for easier access
         heartbeat_payload &hp = nm.second.hb_payload;
@@ -427,6 +444,26 @@ void MissionControl::heartbeat_timer_callback() {
                 get_mission_state_str(prepare_mission) + "' state");
         }
     }
+}
+
+/**
+ * @brief Callback function for the probation period timer.
+ *
+ * This function is called when the probation period timer expires. It cancels
+ * the timer, sets the probation period flag to false, and resets the last
+ * active node ID. It also logs a debug message indicating that the probation
+ * period is over for the last active node.
+ */
+void MissionControl::probation_period_timer_callback() {
+    probation_period_timer->cancel();
+
+    probation_period = false;
+    last_active_node_id = "";
+
+    RCLCPP_DEBUG(
+        this->get_logger(),
+        "MissionControl::%s: Probation period over for last_active_node: '%s'",
+        __func__, last_active_node_id.c_str());
 }
 
 /**
