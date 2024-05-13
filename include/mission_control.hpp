@@ -288,10 +288,10 @@ class MissionControl : public common_lib::CommonNode {
                            const nlohmann::json payload_json);
 
     // Mission Abort
-    void mission_abort(std::string reason);
+    [[noreturn]] void mission_abort(std::string reason);
 
     // Mission Finished successfully
-    void mission_finished();
+    [[noreturn]] void mission_finished();
 
     // Fail-Safe checks
     void waypoint_command_callback(
