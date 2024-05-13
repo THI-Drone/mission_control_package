@@ -651,32 +651,6 @@ void MissionControl::health_callback(const interfaces::msg::UAVHealth &msg) {
                       msg.is_magnetometer_calibration_ok &&
                       msg.is_local_position_ok && msg.is_global_position_ok &&
                       msg.is_home_position_ok && msg.is_armable;
-
-    // Check that drone health is still good
-    if (!drone_health_ok && get_mission_state() != selfcheck &&
-        get_mission_state() != prepare_mission) {
-        RCLCPP_WARN(get_logger(),
-                    "MissionControl::%s: Health is no longer good: "
-                    "GYRO: %d, ACCEL: %d, MAGN: %d, LOCALPOS: "
-                    "%d, GLOBALPOS: %d, HOMEPOS: %d, ARMABLE: %d",
-                    __func__, msg.is_gyrometer_calibration_ok,
-                    msg.is_accelerometer_calibration_ok,
-                    msg.is_magnetometer_calibration_ok,
-                    msg.is_local_position_ok, msg.is_global_position_ok,
-                    msg.is_home_position_ok, msg.is_armable);
-
-        mission_abort(
-            "MissionControl::" + (std::string) __func__ +
-            ": Health is no longer good: "
-            "GYRO: " +
-            std::to_string(msg.is_gyrometer_calibration_ok) +
-            ", ACCEL: " + std::to_string(msg.is_accelerometer_calibration_ok) +
-            ", MAGN: " + std::to_string(msg.is_magnetometer_calibration_ok) +
-            ", LOCALPOS: " + std::to_string(msg.is_local_position_ok) +
-            ", GLOBALPOS: " + std::to_string(msg.is_global_position_ok) +
-            ", HOMEPOS: " + std::to_string(msg.is_home_position_ok) +
-            ", ARMABLE: " + std::to_string(msg.is_armable));
-    }
 }
 
 /**
