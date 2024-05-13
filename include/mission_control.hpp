@@ -216,7 +216,6 @@ class MissionControl : public common_lib::CommonNode {
    public:
     MissionControl(const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
 
-   private:
     // Event Loop
     void event_loop();
 
