@@ -327,10 +327,10 @@ void MissionControl::mode_detect_marker() {
                     __func__,
                     commands.at(current_command_id)
                         .data.at("timeout_ms")
-                        .get<uint16_t>(),
+                        .get<uint32_t>(),
                     commands.at(current_command_id)
                             .data.at("timeout_ms")
-                            .get<uint16_t>() /
+                            .get<uint32_t>() /
                         1000.0);
     }
 
