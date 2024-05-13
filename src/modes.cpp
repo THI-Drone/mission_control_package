@@ -425,12 +425,12 @@ void MissionControl::mode_self_check() {
     if (i >= max_wait_time) {
         RCLCPP_FATAL(this->get_logger(),
                      "MissionControl::%s: Self check failed: Not all "
-                     "heartbeats received in the given timeframe (%us)",
+                     "conditions met in the given timeframe (%us)",
                      __func__,
                      (max_wait_time * event_loop_time_delta_ms) / 1000);
         mission_abort(
             "MissionControl::" + (std::string) __func__ +
-            ": Self check failed: Not all heartbeats received in the given "
+            ": Self check failed: Not all conditions met in the given "
             "timeframe");
     }
 
