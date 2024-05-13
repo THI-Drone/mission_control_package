@@ -505,20 +505,33 @@ void MissionControl::mode_check_drone_configuration() {
                     current_flight_mode);
     }
 
-    // Check that FCC is in 'HOLD' state and drone is on ground
+    // Check that FCC is in 'HOLD' state and drone is on the ground
     if (current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
         current_flight_mode == interfaces::msg::FlightMode::HOLD) {
         // Check that current position is in geofence
-        if (!mission_definition_reader.check_in_geofence(
-                current_position.get_position_array())) {
+        try {
+            if (!mission_definition_reader.check_in_geofence(
+                    current_position.get_position_array())) {
+                RCLCPP_FATAL(this->get_logger(),
+                             "MissionControl::%s: "
+                             "Drone is outside of geofence. Can't arm.",
+                             __func__);
+
+                mission_abort("MissionControl::" + (std::string) __func__ +
+                              ": Drone is "
+                              "outside of geofence. Can't arm.");
+            }
+        } catch (const std::runtime_error &e) {
             RCLCPP_FATAL(this->get_logger(),
                          "MissionControl::%s: "
-                         "Drone is outside of geofence. Can't arm.",
-                         __func__);
+                         "Position could not be verified to be inside of the "
+                         "geofence: %s",
+                         __func__, e.what());
 
-            mission_abort("MissionControl::" + (std::string) __func__ +
-                          ": Drone is "
-                          "outside of geofence. Can't arm.");
+            mission_abort((std::string) "MissionControl::" + __func__ +
+                          ": Position could not be verified to be inside of "
+                          "the geofence: " +
+                          e.what());
         }
 
         // All checks finished, go to 'armed' state
