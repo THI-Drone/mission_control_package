@@ -191,7 +191,7 @@ void MissionControl::event_loop() {
  */
 void MissionControl::send_control(const std::string &target_id,
                                   const bool active,
-                                  const std::string payload) {
+                                  const std::string &payload) {
     interfaces::msg::Control msg;
     msg.target_id = target_id;
     msg.active = active;
@@ -233,15 +233,14 @@ void MissionControl::send_control(const std::string &target_id,
  */
 void MissionControl::send_control_json(const std::string &target_id,
                                        const bool active,
-                                       const nlohmann::json payload_json) {
+                                       const nlohmann::json &payload_json) {
     std::string payload = "";
 
     try {
         payload = payload_json.dump();
     } catch (const nlohmann::json::type_error &e) {
-        mission_abort(
-            "MissionControl::" + (std::string) __func__ +
-            ": Failed to dump payload_json: " + (std::string)e.what());
+        mission_abort((std::string) "MissionControl::" + __func__ +
+                      ": Failed to dump payload_json: " + e.what());
     }
 
     return send_control(target_id, active, payload);

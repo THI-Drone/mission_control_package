@@ -55,7 +55,7 @@ class MissionControl : public common_lib::CommonNode {
      * @brief Class for handling the mission logic.
      */
 
-   private:
+   public:
     // General
     MissionState_t mission_state = prepare_mission;  //!< Main mission state
     std::string active_marker_name =
@@ -282,9 +282,9 @@ class MissionControl : public common_lib::CommonNode {
 
     // Control Functions
     void send_control(const std::string &target_id, const bool active,
-                      const std::string payload);
+                      const std::string &payload);
     void send_control_json(const std::string &target_id, const bool active,
-                           const nlohmann::json payload_json);
+                           const nlohmann::json &payload_json);
 
     // Mission Abort
     [[noreturn]] void mission_abort(std::string reason);
