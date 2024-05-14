@@ -84,22 +84,6 @@ void MissionControl::set_active_node_id(std::string node_id) {
 }
 
 /**
- * @brief Sets the active marker name.
- *
- * This function sets the active marker name to the provided value.
- *
- * @param new_active_marker_name The new active marker name.
- */
-void MissionControl::set_active_marker_name(
-    const std::string& new_active_marker_name) {
-    RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::%s: Set active_marker_name to %s", __func__,
-                 new_active_marker_name.c_str());
-
-    active_marker_name = new_active_marker_name;
-}
-
-/**
  * @brief Clears the active node ID.
  *
  * This function clears the active node ID by setting it to an empty string.
@@ -115,6 +99,22 @@ void MissionControl::clear_active_node_id() {
 
     // Set active node
     active_node_id = "";
+}
+
+/**
+ * @brief Sets the active marker name.
+ *
+ * This function sets the active marker name to the provided value.
+ *
+ * @param new_active_marker_name The new active marker name.
+ */
+void MissionControl::set_active_marker_name(
+    const std::string& new_active_marker_name) {
+    RCLCPP_DEBUG(this->get_logger(),
+                 "MissionControl::%s: Set active_marker_name to '%s'", __func__,
+                 new_active_marker_name.c_str());
+
+    active_marker_name = new_active_marker_name;
 }
 
 /**
