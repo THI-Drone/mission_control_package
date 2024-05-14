@@ -101,7 +101,7 @@ class MissionControl : public common_lib::CommonNode {
                 //!< are ok, otherwise false
 
     // Probation period
-    const uint32_t probation_period_length_ms =
+    constexpr static uint32_t probation_period_length_ms =
         50;  //!< Length of the probation time in ms
     bool probation_period =
         false;  //!< If set to true, the active node id has been set in the last
