@@ -78,6 +78,7 @@ if(BUILD_TESTING)
   ament_add_gtest(${PROJECT_NAME}_test
                   test/main_test.cpp
                   test/mission_control_test.cpp
+                  test/basics_test.cpp
                   test/mission_file_reader/mission_file_reader_test.cpp)
   target_include_directories(${PROJECT_NAME}_test PUBLIC
           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
