@@ -29,27 +29,35 @@ void MissionControl::set_standby_config() { clear_active_node_id(); }
 /**
  * @brief Sets the mission state to a new value.
  *
- * This function sets the mission state to the specified new value. If the new
- * value is different from the current mission state, the
- * `job_finished_successfully` flag is set to false and the `state_first_loop`
- * flag is set to true. After updating the mission state, a debug message is
- * logged.
- * Additionally resets `mission_progress` to 0.
+ * This function checks if the mission state is already set to the new value. If
+ * it is, a warning message is logged and the function returns without making
+ * any changes. Otherwise, the function resets state-dependent variables,
+ * updates the mission state to the new value, and logs a debug message
+ * indicating the new mission state.
  *
  * @param new_mission_state The new mission state to set.
  */
 void MissionControl::set_mission_state(const MissionState_t new_mission_state) {
-    if (mission_state != new_mission_state) {
-        job_finished_successfully = false;
-        state_first_loop = true;
+    // Check if mission state is already set
+    if (mission_state == new_mission_state) {
+        RCLCPP_WARN(this->get_logger(),
+                    "MissionControl::%s: Mission state already set to '%s'",
+                    __func__, get_mission_state_str());
+
+        return;
     }
 
+    // Reset state dependant variables
+    job_finished_successfully = false;
+    state_first_loop = true;
     mission_progress = 0.0;
+
+    // Set new mission state
     mission_state = new_mission_state;
 
     RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::%s: Set mission state to %d", __func__,
-                 mission_state);
+                 "MissionControl::%s: Set mission state to '%s'", __func__,
+                 get_mission_state_str());
 }
 
 /**
@@ -63,7 +71,7 @@ void MissionControl::set_mission_state(const MissionState_t new_mission_state) {
  */
 void MissionControl::set_active_node_id(std::string node_id) {
     RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::%s: Set active_node_id to %s", __func__,
+                 "MissionControl::%s: Set active_node_id to '%s'", __func__,
                  node_id.c_str());
 
     // Init and start probation period

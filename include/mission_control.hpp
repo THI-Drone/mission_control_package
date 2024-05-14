@@ -36,26 +36,26 @@
 #include "interfaces/msg/uav_waypoint_command.hpp"
 #include "interfaces/msg/waypoint.hpp"
 
-/**
- * @brief Enumeration representing the different states of a mission.
- */
-typedef enum MissionState {
-    prepare_mission,
-    selfcheck,
-    check_drone_configuration,
-    armed,
-    takeoff,
-    decision_maker,
-    fly_to_waypoint,
-    detect_marker,
-} MissionState_t;
-
 class MissionControl : public common_lib::CommonNode {
     /**
      * @brief Class for handling the mission logic.
      */
 
    public:
+    /**
+     * @brief Enumeration representing the different states of a mission.
+     */
+    typedef enum MissionState {
+        prepare_mission,
+        selfcheck,
+        check_drone_configuration,
+        armed,
+        takeoff,
+        decision_maker,
+        fly_to_waypoint,
+        detect_marker,
+    } MissionState_t;
+
     // General
     MissionState_t mission_state = prepare_mission;  //!< Main mission state
     std::string active_marker_name =
