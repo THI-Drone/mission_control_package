@@ -206,6 +206,17 @@ TEST(mission_control_package, file_format_test) {
                           "mdf_correct_init_only.json",
                           true));
     }
+
+    {
+        // Test incorrect json file with two "detect_marker" commands in a
+        // marker
+        MissionDefinitionReader mdr;
+        ASSERT_THROW(mdr.read_file("../../src/mission_control_package/test/"
+                                   "mission_file_reader/test_assets/"
+                                   "mdf_too_many_detect_marker.json",
+                                   true),
+                     std::runtime_error);
+    }
 }
 
 TEST(mission_control_package, file_save_test) {

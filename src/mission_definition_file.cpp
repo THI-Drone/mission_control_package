@@ -237,6 +237,8 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                     "'" +
                     marker_name + "' must have at least one command");
 
+            bool detect_marker_command_found = false;
+
             for (const auto &[key, val] : marker_content.items()) {
                 // Loop through every command in the marker
 
@@ -312,6 +314,16 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                             "[MARKERS::COMMAND] Waypoint "
                             "check successfull\n",
                             __func__);
+                    } else if (marker_type == "detect_marker") {
+                        if (detect_marker_command_found) {
+                            throw std::runtime_error(
+                                "MissionDefinitionReader::" +
+                                (std::string) __func__ +
+                                ": 'detect_marker' commands can only appear "
+                                "max. once per marker");
+                        }
+
+                        detect_marker_command_found = true;
                     }
                 }
             }
