@@ -184,7 +184,7 @@ void MissionControl::mode_decision_maker() {
     // Log current status
     {
         const std::string standby_text =
-            (executed_marker_names.find(get_active_marker_name()) !=
+            (executed_marker_names.find(get_active_marker_name()) ==
              executed_marker_names.end())
                 ? " [STANDBY]"
                 : "";
