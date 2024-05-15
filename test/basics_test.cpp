@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cinttypes>
 #include <nlohmann/json.hpp>
+#include <optional>
 
 #include "common_package/topic_names.hpp"
 #include "mission_control.hpp"
@@ -153,8 +154,8 @@ TEST(mission_control_package, probation_period_test) {
         probation_period_trigger_timer =
             mission_control_node->create_wall_timer(
                 std::chrono::milliseconds(time_offset_ms),
-                [mission_control_node, probation_period_trigger_timer]() {
-                    RCLCPP_ERROR(mission_control_node->get_logger(),
+                [mission_control_node, &probation_period_trigger_timer]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
                                  "Setting active node id and thereby "
                                  "triggering probation period");
 
@@ -170,8 +171,8 @@ TEST(mission_control_package, probation_period_test) {
                 std::chrono::milliseconds(
                     time_offset_ms +
                     mission_control_node->probation_period_length_ms - 10),
-                [mission_control_node, probation_period_check_active_timer]() {
-                    RCLCPP_ERROR(
+                [mission_control_node, &probation_period_check_active_timer]() {
+                    RCLCPP_DEBUG(
                         mission_control_node->get_logger(),
                         "Checking that probation period is currently active");
 
@@ -191,7 +192,7 @@ TEST(mission_control_package, probation_period_test) {
                     time_offset_ms +
                     mission_control_node->probation_period_length_ms + 10),
                 [mission_control_node, &executor]() {
-                    RCLCPP_ERROR(mission_control_node->get_logger(),
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
                                  "Checking that probation period is currently "
                                  "not active");
 
@@ -227,8 +228,8 @@ TEST(mission_control_package, probation_period_test) {
         probation_period_trigger_timer =
             mission_control_node->create_wall_timer(
                 std::chrono::milliseconds(time_offset_ms),
-                [mission_control_node, probation_period_trigger_timer]() {
-                    RCLCPP_ERROR(mission_control_node->get_logger(),
+                [mission_control_node, &probation_period_trigger_timer]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
                                  "Clearing active node id and thereby "
                                  "triggering probation period");
 
@@ -244,8 +245,8 @@ TEST(mission_control_package, probation_period_test) {
                 std::chrono::milliseconds(
                     time_offset_ms +
                     mission_control_node->probation_period_length_ms - 10),
-                [mission_control_node, probation_period_check_active_timer]() {
-                    RCLCPP_ERROR(
+                [mission_control_node, &probation_period_check_active_timer]() {
+                    RCLCPP_DEBUG(
                         mission_control_node->get_logger(),
                         "Checking that probation period is currently active");
 
@@ -264,7 +265,7 @@ TEST(mission_control_package, probation_period_test) {
                     time_offset_ms +
                     mission_control_node->probation_period_length_ms + 10),
                 [mission_control_node, &executor]() {
-                    RCLCPP_ERROR(mission_control_node->get_logger(),
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
                                  "Checking that probation period is currently "
                                  "not active");
 
@@ -387,5 +388,271 @@ TEST(mission_control_package, current_mission_finished_test) {
 
         ASSERT_FALSE(mc.current_mission_finished());
         ASSERT_EQ(mc.mission_progress, -1.23f);
+    }
+}
+
+TEST(mission_control_package, wait_time_test) {
+    // Check the wait time funtionality with a wait time of 100 ms
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>();
+
+        mission_control_node->event_loop_active =
+            false;  // Deactivate event loop so that an internal state doesn't
+                    // mess with the test
+
+        // Time offset that is accepted
+        const double time_offset_s = 10.0 / 1000.0;
+
+        // Duration that should be waited for
+        const uint32_t wait_time_ms = 100;
+
+        // Timestamp when the wait time was started
+        rclcpp::Time start_timestamp;
+
+        rclcpp::TimerBase::SharedPtr wait_check_timer;
+        wait_check_timer = mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(1),
+            [&executor, mission_control_node, &wait_check_timer, time_offset_s,
+             wait_time_ms, &start_timestamp]() {
+                if (mission_control_node->wait_time_finished()) {
+                    rclcpp::Time end_timestamp = mission_control_node->now();
+
+                    if (wait_check_timer) wait_check_timer->cancel();
+
+                    const double abs_time_dif =
+                        std::abs((start_timestamp - end_timestamp).seconds()) -
+                        (wait_time_ms / 1000.0);
+
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Wait time finished: Time dif: %f",
+                                 abs_time_dif);
+
+                    ASSERT_TRUE(abs_time_dif <= time_offset_s);
+                    ASSERT_FALSE(mission_control_node->wait_time_finished_ok);
+
+                    executor.cancel();
+                } else {
+                    ASSERT_FALSE(mission_control_node->wait_time_finished_ok);
+                }
+            });
+
+        rclcpp::TimerBase::SharedPtr start_wait_time_timer;
+        start_wait_time_timer = mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(10),
+            [mission_control_node, &start_wait_time_timer, wait_time_ms,
+             &start_timestamp]() {
+                RCLCPP_DEBUG(mission_control_node->get_logger(),
+                             "Starting wait time");
+
+                if (start_wait_time_timer) start_wait_time_timer->cancel();
+
+                mission_control_node->init_wait(wait_time_ms);
+                start_timestamp = mission_control_node->now();
+            });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check the wait time funtionality with a wait time of 1 ms
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>();
+
+        mission_control_node->event_loop_active =
+            false;  // Deactivate event loop so that an internal state doesn't
+                    // mess with the test
+
+        // Time offset that is accepted
+        const double time_offset_s = 10.0 / 1000.0;
+
+        // Duration that should be waited for
+        const uint32_t wait_time_ms = 1;
+
+        // Timestamp when the wait time was started
+        rclcpp::Time start_timestamp;
+
+        rclcpp::TimerBase::SharedPtr wait_check_timer;
+        wait_check_timer = mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(1),
+            [&executor, mission_control_node, &wait_check_timer, time_offset_s,
+             wait_time_ms, &start_timestamp]() {
+                if (mission_control_node->wait_time_finished()) {
+                    rclcpp::Time end_timestamp = mission_control_node->now();
+
+                    if (wait_check_timer) wait_check_timer->cancel();
+
+                    const double abs_time_dif =
+                        std::abs((start_timestamp - end_timestamp).seconds()) -
+                        (wait_time_ms / 1000.0);
+
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Wait time finished: Time dif: %f",
+                                 abs_time_dif);
+
+                    ASSERT_TRUE(abs_time_dif <= time_offset_s);
+                    ASSERT_FALSE(mission_control_node->wait_time_finished_ok);
+
+                    executor.cancel();
+                } else {
+                    ASSERT_FALSE(mission_control_node->wait_time_finished_ok);
+                }
+            });
+
+        rclcpp::TimerBase::SharedPtr start_wait_time_timer;
+        start_wait_time_timer = mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(10),
+            [mission_control_node, &start_wait_time_timer, wait_time_ms,
+             &start_timestamp]() {
+                RCLCPP_DEBUG(mission_control_node->get_logger(),
+                             "Starting wait time");
+
+                if (start_wait_time_timer) start_wait_time_timer->cancel();
+
+                mission_control_node->init_wait(wait_time_ms);
+                start_timestamp = mission_control_node->now();
+            });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check the wait time funtionality with a wait time of 0 ms
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>();
+
+        mission_control_node->event_loop_active =
+            false;  // Deactivate event loop so that an internal state doesn't
+                    // mess with the test
+
+        // Time offset that is accepted
+        const double time_offset_s = 10.0 / 1000.0;
+
+        // Duration that should be waited for
+        const uint32_t wait_time_ms = 0;
+
+        // Timestamp when the wait time was started
+        rclcpp::Time start_timestamp;
+
+        rclcpp::TimerBase::SharedPtr wait_check_timer;
+        wait_check_timer = mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(1),
+            [&executor, mission_control_node, &wait_check_timer, time_offset_s,
+             wait_time_ms, &start_timestamp]() {
+                if (mission_control_node->wait_time_finished()) {
+                    rclcpp::Time end_timestamp = mission_control_node->now();
+
+                    if (wait_check_timer) wait_check_timer->cancel();
+
+                    const double abs_time_dif =
+                        std::abs((start_timestamp - end_timestamp).seconds()) -
+                        (wait_time_ms / 1000.0);
+
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Wait time finished: Time dif: %f",
+                                 abs_time_dif);
+
+                    ASSERT_TRUE(abs_time_dif <= time_offset_s);
+                    ASSERT_FALSE(mission_control_node->wait_time_finished_ok);
+
+                    executor.cancel();
+                } else {
+                    ASSERT_FALSE(mission_control_node->wait_time_finished_ok);
+                }
+            });
+
+        rclcpp::TimerBase::SharedPtr start_wait_time_timer;
+        start_wait_time_timer = mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(10),
+            [mission_control_node, &start_wait_time_timer, wait_time_ms,
+             &start_timestamp]() {
+                RCLCPP_DEBUG(mission_control_node->get_logger(),
+                             "Starting wait time");
+
+                if (start_wait_time_timer) start_wait_time_timer->cancel();
+
+                mission_control_node->init_wait(wait_time_ms);
+                start_timestamp = mission_control_node->now();
+            });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check cancelling the wait time
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>();
+
+        mission_control_node->event_loop_active =
+            false;  // Deactivate event loop so that an internal state doesn't
+                    // mess with the test
+
+        // Duration that should be waited for
+        const uint32_t wait_time_ms = 100;
+
+        // Timestamp when the wait time was started
+        std::optional<rclcpp::Time> start_timestamp;
+
+        rclcpp::TimerBase::SharedPtr wait_check_timer;
+        wait_check_timer = mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(1),
+            [&executor, mission_control_node, &wait_check_timer, wait_time_ms,
+             &start_timestamp]() {
+                ASSERT_FALSE(mission_control_node->wait_time_finished());
+                rclcpp::Time cur_timestamp = mission_control_node->now();
+
+                // Check if wait time has not started yet
+                if (!start_timestamp.has_value()) return;
+
+                if ((cur_timestamp - start_timestamp.value()).seconds() >
+                    ((wait_time_ms * 1.5) / 1000.0)) {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Finished waiting for wait time");
+
+                    executor.cancel();
+                }
+            });
+
+        rclcpp::TimerBase::SharedPtr cancel_wait_time_timer;
+        cancel_wait_time_timer = mission_control_node->create_wall_timer(
+            std::chrono::milliseconds((uint32_t)(wait_time_ms * 0.5)),
+            [mission_control_node, &cancel_wait_time_timer, wait_time_ms]() {
+                RCLCPP_DEBUG(mission_control_node->get_logger(),
+                             "Cancelling wait time");
+
+                if (cancel_wait_time_timer) cancel_wait_time_timer->cancel();
+
+                ASSERT_FALSE(mission_control_node->wait_time_finished_ok);
+                mission_control_node->cancel_wait();
+                ASSERT_FALSE(mission_control_node->wait_time_finished_ok);
+            });
+
+        rclcpp::TimerBase::SharedPtr start_wait_time_timer;
+        start_wait_time_timer = mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(10),
+            [mission_control_node, &start_wait_time_timer, wait_time_ms,
+             &start_timestamp]() {
+                RCLCPP_DEBUG(mission_control_node->get_logger(),
+                             "Starting wait time");
+
+                if (start_wait_time_timer) start_wait_time_timer->cancel();
+
+                mission_control_node->init_wait(wait_time_ms);
+                start_timestamp = mission_control_node->now();
+            });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
     }
 }
