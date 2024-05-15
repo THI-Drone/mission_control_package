@@ -79,6 +79,7 @@ if(BUILD_TESTING)
                   test/main_test.cpp
                   test/mission_control_test.cpp
                   test/basics_test.cpp
+                  test/event_loop_guard_test.cpp
                   test/mission_file_reader/mission_file_reader_test.cpp)
   target_include_directories(${PROJECT_NAME}_test PUBLIC
           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
