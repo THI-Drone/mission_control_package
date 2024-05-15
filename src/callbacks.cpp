@@ -62,14 +62,15 @@ void MissionControl::job_finished_callback(
     clear_active_node_id();
 
     // Store payload for future use
-    job_finished_payload = msg.payload;
+    job_finished_payload = payload;
 
     // Set job_finished_successfully flag to true indicating receiving a
     // successfull job_finished message
     RCLCPP_INFO(this->get_logger(),
                 "MissionControl::%s: Job finished "
-                "successfully: node_id %s",
-                __func__, msg.sender_id.c_str());
+                "successfully: node_id: '%s', payload: '%s'",
+                __func__, msg.sender_id.c_str(), payload.dump().c_str());
+
     job_finished_successfully = true;
 }
 
