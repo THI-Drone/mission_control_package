@@ -50,13 +50,13 @@ TEST(mission_control_package, set_active_node_id_test) {
     // Test with no previous active node id
     {
         MissionControl mc = MissionControl();
-        ASSERT_FALSE(mc.probation_period);
+        ASSERT_FALSE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "");
         ASSERT_EQ(mc.get_last_active_node_id(), "");
 
         mc.set_active_node_id("abc");
 
-        ASSERT_TRUE(mc.probation_period);
+        ASSERT_TRUE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "abc");
         ASSERT_EQ(mc.get_last_active_node_id(), "");
     }
@@ -66,13 +66,13 @@ TEST(mission_control_package, set_active_node_id_test) {
         MissionControl mc = MissionControl();
         mc.active_node_id = "previous";
 
-        ASSERT_FALSE(mc.probation_period);
+        ASSERT_FALSE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "previous");
         ASSERT_EQ(mc.get_last_active_node_id(), "");
 
         mc.set_active_node_id("abc");
 
-        ASSERT_TRUE(mc.probation_period);
+        ASSERT_TRUE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "abc");
         ASSERT_EQ(mc.get_last_active_node_id(), "previous");
     }
@@ -82,13 +82,13 @@ TEST(mission_control_package, clear_active_node_id_test) {
     // Test with no previous active node id
     {
         MissionControl mc = MissionControl();
-        ASSERT_FALSE(mc.probation_period);
+        ASSERT_FALSE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "");
         ASSERT_EQ(mc.get_last_active_node_id(), "");
 
         mc.clear_active_node_id();
 
-        ASSERT_TRUE(mc.probation_period);
+        ASSERT_TRUE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "");
         ASSERT_EQ(mc.get_last_active_node_id(), "");
     }
@@ -98,13 +98,45 @@ TEST(mission_control_package, clear_active_node_id_test) {
         MissionControl mc = MissionControl();
         mc.active_node_id = "abc";
 
-        ASSERT_FALSE(mc.probation_period);
+        ASSERT_FALSE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "abc");
         ASSERT_EQ(mc.get_last_active_node_id(), "");
 
         mc.clear_active_node_id();
 
-        ASSERT_TRUE(mc.probation_period);
+        ASSERT_TRUE(mc.get_probation_period());
+        ASSERT_EQ(mc.get_active_node_id(), "");
+        ASSERT_EQ(mc.get_last_active_node_id(), "abc");
+    }
+}
+
+TEST(mission_control_package, set_standby_config_test) {
+    // Test with no previous active node id
+    {
+        MissionControl mc = MissionControl();
+        ASSERT_FALSE(mc.get_probation_period());
+        ASSERT_EQ(mc.get_active_node_id(), "");
+        ASSERT_EQ(mc.get_last_active_node_id(), "");
+
+        mc.set_standby_config();
+
+        ASSERT_TRUE(mc.get_probation_period());
+        ASSERT_EQ(mc.get_active_node_id(), "");
+        ASSERT_EQ(mc.get_last_active_node_id(), "");
+    }
+
+    // Test with previous active node id
+    {
+        MissionControl mc = MissionControl();
+        mc.active_node_id = "abc";
+
+        ASSERT_FALSE(mc.get_probation_period());
+        ASSERT_EQ(mc.get_active_node_id(), "abc");
+        ASSERT_EQ(mc.get_last_active_node_id(), "");
+
+        mc.set_standby_config();
+
+        ASSERT_TRUE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "");
         ASSERT_EQ(mc.get_last_active_node_id(), "abc");
     }
@@ -179,7 +211,7 @@ TEST(mission_control_package, probation_period_test) {
                     if (probation_period_check_active_timer)
                         probation_period_check_active_timer->cancel();
 
-                    ASSERT_TRUE(mission_control_node->probation_period);
+                    ASSERT_TRUE(mission_control_node->get_probation_period());
                     ASSERT_EQ(mission_control_node->get_active_node_id(),
                               "abc");
                     ASSERT_EQ(mission_control_node->get_last_active_node_id(),
@@ -196,7 +228,7 @@ TEST(mission_control_package, probation_period_test) {
                                  "Checking that probation period is currently "
                                  "not active");
 
-                    ASSERT_FALSE(mission_control_node->probation_period);
+                    ASSERT_FALSE(mission_control_node->get_probation_period());
                     ASSERT_EQ(mission_control_node->get_active_node_id(),
                               "abc");
                     ASSERT_EQ(mission_control_node->get_last_active_node_id(),
@@ -253,7 +285,7 @@ TEST(mission_control_package, probation_period_test) {
                     if (probation_period_check_active_timer)
                         probation_period_check_active_timer->cancel();
 
-                    ASSERT_TRUE(mission_control_node->probation_period);
+                    ASSERT_TRUE(mission_control_node->get_probation_period());
                     ASSERT_EQ(mission_control_node->get_active_node_id(), "");
                     ASSERT_EQ(mission_control_node->get_last_active_node_id(),
                               "previous");
@@ -269,7 +301,7 @@ TEST(mission_control_package, probation_period_test) {
                                  "Checking that probation period is currently "
                                  "not active");
 
-                    ASSERT_FALSE(mission_control_node->probation_period);
+                    ASSERT_FALSE(mission_control_node->get_probation_period());
                     ASSERT_EQ(mission_control_node->get_active_node_id(), "");
                     ASSERT_EQ(mission_control_node->get_last_active_node_id(),
                               "");
@@ -654,5 +686,49 @@ TEST(mission_control_package, wait_time_test) {
 
         executor.add_node(mission_control_node);
         executor.spin();
+    }
+}
+
+TEST(mission_control_package, get_mission_state_str_test) {
+    // Test using the explicit function
+    {
+        MissionControl mc = MissionControl();
+
+        ASSERT_STREQ(mc.get_mission_state_str(MissionControl::prepare_mission),
+                     "prepare_mission");
+        ASSERT_STREQ(mc.get_mission_state_str(MissionControl::selfcheck),
+                     "selfcheck");
+        ASSERT_STREQ(
+            mc.get_mission_state_str(MissionControl::check_drone_configuration),
+            "check_drone_configuration");
+        ASSERT_STREQ(mc.get_mission_state_str(MissionControl::armed), "armed");
+        ASSERT_STREQ(mc.get_mission_state_str(MissionControl::takeoff),
+                     "takeoff");
+        ASSERT_STREQ(mc.get_mission_state_str(MissionControl::decision_maker),
+                     "decision_maker");
+        ASSERT_STREQ(mc.get_mission_state_str(MissionControl::fly_to_waypoint),
+                     "fly_to_waypoint");
+        ASSERT_STREQ(mc.get_mission_state_str(MissionControl::detect_marker),
+                     "detect_marker");
+    }
+
+    // Test with invalid mission state
+    {
+        MissionControl mc = MissionControl();
+
+        ASSERT_THROW(
+            mc.get_mission_state_str((MissionControl::MissionState_t)-1),
+            std::runtime_error);
+    }
+
+    // Test using the implicit function
+    {
+        MissionControl mc = MissionControl();
+
+        ASSERT_STREQ(mc.get_mission_state_str(), "prepare_mission");
+
+        mc.set_mission_state(MissionControl::decision_maker);
+
+        ASSERT_STREQ(mc.get_mission_state_str(), "decision_maker");
     }
 }
