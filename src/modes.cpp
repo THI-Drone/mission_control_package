@@ -182,13 +182,22 @@ void MissionControl::mode_decision_maker() {
                       ": Comand list is empty");
 
     // Log current status
-    RCLCPP_INFO(this->get_logger(),
-                "MissionControl::%s: active_marker_name: "
-                "'%s', current_command_type: '%s', current_command_id: %ld, "
-                "command count: %ld",
-                __func__, get_active_marker_name().c_str(),
-                commands.at(current_command_id).type.c_str(),
-                current_command_id, commands.size());
+    {
+        const std::string standby_text =
+            (executed_marker_names.find(get_active_marker_name()) !=
+             executed_marker_names.end())
+                ? " [STANDBY]"
+                : "";
+
+        RCLCPP_INFO(
+            this->get_logger(),
+            "MissionControl::%s: active_marker_name: "
+            "'%s'%s, current_command_type: '%s', current_command_id: %ld, "
+            "command count: %ld",
+            __func__, get_active_marker_name().c_str(), standby_text.c_str(),
+            commands.at(current_command_id).type.c_str(), current_command_id,
+            commands.size());
+    }
 
     // Switch mode based on the current command
     std::string &current_command_type = commands.at(current_command_id).type;
