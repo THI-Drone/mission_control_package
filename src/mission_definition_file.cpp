@@ -315,6 +315,9 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                             "check successfull\n",
                             __func__);
                     } else if (marker_type == "detect_marker") {
+                        // Check that only max. one 'detect_marker' command
+                        // exists per marker
+
                         if (detect_marker_command_found) {
                             throw std::runtime_error(
                                 "MissionDefinitionReader::" +
