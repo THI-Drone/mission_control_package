@@ -35,20 +35,6 @@ MissionControl::MissionControl(const rclcpp::NodeOptions &options)
             "'MDF_FILE_PATH' parameter is of wrong type. Expected string.");
     }
 
-    // Register nodes
-    const std::string node_names[] = {"waypoint_node", "fcc_bridge",
-                                      "qr_code_scanner_node"}; // TODO optimize
-
-    for (const std::string &name : node_names) {
-        node_map[name] = ros_node();
-    }
-
-    // Allowing fcc_bridge to start the mission
-    node_map["fcc_bridge"].can_start_mission = true;
-
-    // Setting fcc flag for fcc_bridge
-    node_map["fcc_bridge"].is_fcc_bridge = true;
-
     // Initialize Heartbeat
     heartbeat_subscription =
         this->create_subscription<interfaces::msg::Heartbeat>(

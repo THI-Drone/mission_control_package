@@ -28,11 +28,29 @@ struct heartbeat_payload {
  *
  * This struct contains a heartbeat payload and a flag indicating whether the
  * node is allowed to start the mission.
+ *
+ * @note Only set the `is_fcc_bridge` flag for the actual fcc bridge
  */
 struct ros_node {
     struct heartbeat_payload hb_payload;
     bool can_start_mission = false;
     bool is_fcc_bridge = false;
+
+    /**
+     * @brief Default constructor for the ros_node class.
+     */
+    ros_node() = default;
+
+    /**
+     * @brief Initialize a node and provide values for the `can_start_mission`
+     * and `is_fcc_bridge` flags.
+     *
+     * @note Only set the `is_fcc_bridge` flag for the actual fcc bridge
+     */
+    ros_node(const bool can_start_mission, const bool is_fcc_bridge) {
+        this->can_start_mission = can_start_mission;
+        this->is_fcc_bridge = is_fcc_bridge;
+    }
 };
 
 /**
