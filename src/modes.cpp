@@ -403,7 +403,9 @@ void MissionControl::mode_self_check() {
         i = 0;
     }
 
-    const uint32_t max_wait_time = (30 * 1000) / event_loop_time_delta_ms;
+    const uint32_t max_wait_time =
+        (30 /* [s] */ * 1000) / event_loop_time_delta_ms;
+
     if (i % (1000 / event_loop_time_delta_ms) == 0) {
         // Creating helpful log message
         std::vector<std::string> missing_conditions = {};
@@ -513,7 +515,9 @@ void MissionControl::mode_check_drone_configuration() {
         i = 0;
     }
 
-    const uint32_t max_wait_time = (60 * 1000) / event_loop_time_delta_ms;
+    const uint32_t max_wait_time =
+        (60 /* [s] */ * 1000) / event_loop_time_delta_ms;
+
     if (i % (1000 / event_loop_time_delta_ms) == 0) {
         // Creating helpful log message
         std::vector<std::string> missing_conditions = {};
