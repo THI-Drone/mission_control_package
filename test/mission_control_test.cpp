@@ -339,13 +339,17 @@ TEST(mission_control_package, send_control_json_test) {
 }
 
 /**
- * @brief Test case for the mission_abort function in the
- * mission_control_package.
+ * @brief Test case for the mission_abort_test.
  *
  * This test case verifies the behavior of the mission_abort function in
- * different scenarios. It creates a mission_control_node and tests the function
- * with and without an active node. The mission_abort function is expected to
- * abort the mission and log a debug message.
+ * different scenarios. It tests the behavior when there is no active node, when
+ * there is an active node, when there is a last active node, and when there is
+ * both an active node and a last active node. The test case creates a
+ * `MissionControl` node with the given `default_options` and sets the necessary
+ * parameters. It then creates a timer that calls the `mission_abort` function
+ * with a specific message. The test case uses a `SingleThreadedExecutor` to
+ * spin the node and verifies that the node terminates with an expected death
+ * message.
  */
 TEST(mission_control_package, mission_abort_test) {
     rclcpp::NodeOptions default_options;
@@ -380,6 +384,54 @@ TEST(mission_control_package, mission_abort_test) {
             std::make_shared<MissionControl>(default_options);
 
         mission_control_node->active_node_id = "abc";
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(10), [mission_control_node]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Executing mission_abort function");
+
+                    mission_control_node->mission_abort("Planned Failure");
+                });
+
+        executor.add_node(mission_control_node);
+
+        ASSERT_DEATH({ executor.spin(); }, ".*");
+    }
+
+    // With a last active node
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        mission_control_node->active_node_id = "";
+        mission_control_node->last_active_node_id = "abc";
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(10), [mission_control_node]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Executing mission_abort function");
+
+                    mission_control_node->mission_abort("Planned Failure");
+                });
+
+        executor.add_node(mission_control_node);
+
+        ASSERT_DEATH({ executor.spin(); }, ".*");
+    }
+
+    // With an active node and a last active node
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        mission_control_node->active_node_id = "abc";
+        mission_control_node->last_active_node_id = "def";
 
         rclcpp::TimerBase::SharedPtr end_timer =
             mission_control_node->create_wall_timer(

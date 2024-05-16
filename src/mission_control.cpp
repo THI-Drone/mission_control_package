@@ -269,9 +269,17 @@ void MissionControl::mission_abort(std::string reason) {
     RCLCPP_FATAL(this->get_logger(),
                  "MissionControl::%s: Aborting mission, reason: %s", __func__,
                  reason.c_str());
+
+    std::string last_active_node_id_str = "";
+    if (get_last_active_node_id().size() > 0) {
+        last_active_node_id_str =
+            " - Last active node id: '" + get_last_active_node_id() + "'";
+    }
+
     RCLCPP_INFO(this->get_logger(),
-                "MissionControl::%s: Last active node: '%s'", __func__,
-                get_active_node_id().c_str());
+                "MissionControl::%s: Current active node: '%s'%s", __func__,
+                get_active_node_id().c_str(), last_active_node_id_str.c_str());
+
     RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Internal state: '%s'",
                 __func__, get_mission_state_str());
 
