@@ -13,9 +13,12 @@
 #include "rclcpp/node_options.hpp"
 
 TEST(mission_control_package, set_mission_state_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Set new mission state
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         ASSERT_EQ(mc.get_mission_state(), MissionControl::prepare_mission);
         mc.job_finished_successfully = true;
         mc.state_first_loop = false;
@@ -31,7 +34,7 @@ TEST(mission_control_package, set_mission_state_test) {
 
     // Set already existing mission state
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         ASSERT_EQ(mc.get_mission_state(), MissionControl::prepare_mission);
         mc.job_finished_successfully = true;
         mc.state_first_loop = false;
@@ -47,9 +50,12 @@ TEST(mission_control_package, set_mission_state_test) {
 }
 
 TEST(mission_control_package, set_active_node_id_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Test with no previous active node id
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         ASSERT_FALSE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "");
         ASSERT_EQ(mc.get_last_active_node_id(), "");
@@ -63,7 +69,7 @@ TEST(mission_control_package, set_active_node_id_test) {
 
     // Test with previous active node id
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.active_node_id = "previous";
 
         ASSERT_FALSE(mc.get_probation_period());
@@ -79,9 +85,12 @@ TEST(mission_control_package, set_active_node_id_test) {
 }
 
 TEST(mission_control_package, clear_active_node_id_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Test with no previous active node id
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         ASSERT_FALSE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "");
         ASSERT_EQ(mc.get_last_active_node_id(), "");
@@ -95,7 +104,7 @@ TEST(mission_control_package, clear_active_node_id_test) {
 
     // Test with previous active node id
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.active_node_id = "abc";
 
         ASSERT_FALSE(mc.get_probation_period());
@@ -111,9 +120,12 @@ TEST(mission_control_package, clear_active_node_id_test) {
 }
 
 TEST(mission_control_package, set_standby_config_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Test with no previous active node id
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         ASSERT_FALSE(mc.get_probation_period());
         ASSERT_EQ(mc.get_active_node_id(), "");
         ASSERT_EQ(mc.get_last_active_node_id(), "");
@@ -127,7 +139,7 @@ TEST(mission_control_package, set_standby_config_test) {
 
     // Test with previous active node id
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.active_node_id = "abc";
 
         ASSERT_FALSE(mc.get_probation_period());
@@ -143,9 +155,12 @@ TEST(mission_control_package, set_standby_config_test) {
 }
 
 TEST(mission_control_package, set_active_marker_name_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Test with no explicitly set previous marker name
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         ASSERT_EQ(mc.get_active_marker_name(), "init");
 
         mc.set_active_marker_name("abc");
@@ -155,7 +170,7 @@ TEST(mission_control_package, set_active_marker_name_test) {
 
     // Test with previous marker name
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.active_marker_name = "previous";
 
         ASSERT_EQ(mc.get_active_marker_name(), "previous");
@@ -167,12 +182,15 @@ TEST(mission_control_package, set_active_marker_name_test) {
 }
 
 TEST(mission_control_package, probation_period_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Check using the 'set_active_node_id' function
     {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         mission_control_node->event_loop_active =
             false;  // Deactivate event loop so that an internal state doesn't
@@ -246,7 +264,7 @@ TEST(mission_control_package, probation_period_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         mission_control_node->event_loop_active =
             false;  // Deactivate event loop so that an internal state doesn't
@@ -315,9 +333,12 @@ TEST(mission_control_package, probation_period_test) {
 }
 
 TEST(mission_control_package, get_state_first_loop_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Test with 'state_first_loop' false
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.state_first_loop = false;
 
         ASSERT_FALSE(mc.get_state_first_loop());
@@ -325,7 +346,7 @@ TEST(mission_control_package, get_state_first_loop_test) {
 
     // Test with 'state_first_loop' true
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.state_first_loop = true;
 
         ASSERT_TRUE(mc.get_state_first_loop());
@@ -336,9 +357,12 @@ TEST(mission_control_package, get_state_first_loop_test) {
 }
 
 TEST(mission_control_package, get_job_finished_successfully_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Test with 'job_finished_successfully' set to false
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.job_finished_successfully = false;
 
         ASSERT_FALSE(mc.get_job_finished_successfully());
@@ -346,7 +370,7 @@ TEST(mission_control_package, get_job_finished_successfully_test) {
 
     // Test with 'job_finished_successfully' set to true
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.job_finished_successfully = true;
 
         ASSERT_TRUE(mc.get_job_finished_successfully());
@@ -357,9 +381,12 @@ TEST(mission_control_package, get_job_finished_successfully_test) {
 }
 
 TEST(mission_control_package, get_job_finished_payload_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Test with 'get_job_finished_payload' not set
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
 
         ASSERT_EQ(mc.get_job_finished_payload(), nlohmann::json());
         ASSERT_EQ(mc.get_job_finished_payload(), nlohmann::json());
@@ -367,7 +394,7 @@ TEST(mission_control_package, get_job_finished_payload_test) {
 
     // Test with 'get_job_finished_payload' set
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.job_finished_payload = {{"abc", 123}};
 
         ASSERT_EQ(mc.get_job_finished_payload(),
@@ -377,9 +404,12 @@ TEST(mission_control_package, get_job_finished_payload_test) {
 }
 
 TEST(mission_control_package, current_mission_finished_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Test with 'mission_progress' set to 0.0
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.mission_progress = 0.0f;
 
         ASSERT_FALSE(mc.current_mission_finished());
@@ -388,7 +418,7 @@ TEST(mission_control_package, current_mission_finished_test) {
 
     // Test with 'mission_progress' set to 0.5
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.mission_progress = 0.5f;
 
         ASSERT_FALSE(mc.current_mission_finished());
@@ -397,7 +427,7 @@ TEST(mission_control_package, current_mission_finished_test) {
 
     // Test with 'mission_progress' set to 1.0
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.mission_progress = 1.0f;
 
         ASSERT_TRUE(mc.current_mission_finished());
@@ -406,7 +436,7 @@ TEST(mission_control_package, current_mission_finished_test) {
 
     // Test with 'mission_progress' set to 5.123
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.mission_progress = 5.123f;
 
         ASSERT_TRUE(mc.current_mission_finished());
@@ -415,7 +445,7 @@ TEST(mission_control_package, current_mission_finished_test) {
 
     // Test with 'mission_progress' set to -1.23
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
         mc.mission_progress = -1.23f;
 
         ASSERT_FALSE(mc.current_mission_finished());
@@ -424,12 +454,15 @@ TEST(mission_control_package, current_mission_finished_test) {
 }
 
 TEST(mission_control_package, wait_time_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Check the wait time funtionality with a wait time of 100 ms
     {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         mission_control_node->event_loop_active =
             false;  // Deactivate event loop so that an internal state doesn't
@@ -494,7 +527,7 @@ TEST(mission_control_package, wait_time_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         mission_control_node->event_loop_active =
             false;  // Deactivate event loop so that an internal state doesn't
@@ -559,7 +592,7 @@ TEST(mission_control_package, wait_time_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         mission_control_node->event_loop_active =
             false;  // Deactivate event loop so that an internal state doesn't
@@ -624,7 +657,7 @@ TEST(mission_control_package, wait_time_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         mission_control_node->event_loop_active =
             false;  // Deactivate event loop so that an internal state doesn't
@@ -690,9 +723,12 @@ TEST(mission_control_package, wait_time_test) {
 }
 
 TEST(mission_control_package, get_mission_state_str_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Test using the explicit function
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
 
         ASSERT_STREQ(mc.get_mission_state_str(MissionControl::prepare_mission),
                      "prepare_mission");
@@ -714,7 +750,7 @@ TEST(mission_control_package, get_mission_state_str_test) {
 
     // Test with invalid mission state
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
 
         ASSERT_THROW(
             mc.get_mission_state_str((MissionControl::MissionState_t)-1),
@@ -723,7 +759,7 @@ TEST(mission_control_package, get_mission_state_str_test) {
 
     // Test using the implicit function
     {
-        MissionControl mc = MissionControl();
+        MissionControl mc = MissionControl(default_options);
 
         ASSERT_STREQ(mc.get_mission_state_str(), "prepare_mission");
 

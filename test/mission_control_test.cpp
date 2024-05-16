@@ -20,7 +20,12 @@ TEST(mission_control_package, constructor_test) {
     // Check constructor with default file
     {
         std::shared_ptr<MissionControl> mission_control = nullptr;
-        ASSERT_NO_THROW(mission_control = std::make_shared<MissionControl>());
+
+        rclcpp::NodeOptions options;
+        options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
+        ASSERT_NO_THROW(mission_control =
+                            std::make_shared<MissionControl>(options));
 
         ASSERT_EQ(mission_control->mdf_file_path,
                   "src/mission_control_package/assets/mission_test.json");
@@ -56,6 +61,9 @@ TEST(mission_control_package, constructor_test) {
 }
 
 TEST(mission_control_package, send_control_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Check if "active = false" and target is active_node_id
     {
         const std::string target_id = "test";
@@ -65,7 +73,7 @@ TEST(mission_control_package, send_control_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         // Set some values to check that they were resetted in the process
         mission_control_node->active_node_id = target_id;
@@ -118,7 +126,7 @@ TEST(mission_control_package, send_control_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         // Set some values to check that they were resetted in the process
         mission_control_node->active_node_id = "abc";
@@ -172,7 +180,7 @@ TEST(mission_control_package, send_control_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         // Set some values to check that they were resetted in the process
         mission_control_node->active_node_id = "abc";
@@ -219,6 +227,9 @@ TEST(mission_control_package, send_control_test) {
 }
 
 TEST(mission_control_package, send_control_json_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Check with valid json
     {
         const std::string target_id = "test";
@@ -229,7 +240,7 @@ TEST(mission_control_package, send_control_json_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         rclcpp::Node::SharedPtr test_node =
             std::make_shared<rclcpp::Node>("test");
@@ -275,7 +286,7 @@ TEST(mission_control_package, send_control_json_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         rclcpp::TimerBase::SharedPtr end_timer =
             mission_control_node->create_wall_timer(
@@ -298,12 +309,15 @@ TEST(mission_control_package, send_control_json_test) {
 }
 
 TEST(mission_control_package, mission_abort_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Without any active node
     {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         rclcpp::TimerBase::SharedPtr end_timer =
             mission_control_node->create_wall_timer(
@@ -324,7 +338,7 @@ TEST(mission_control_package, mission_abort_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         mission_control_node->active_node_id = "abc";
 
@@ -344,12 +358,15 @@ TEST(mission_control_package, mission_abort_test) {
 }
 
 TEST(mission_control_package, mission_finished_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+
     // Without any active node
     {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         rclcpp::TimerBase::SharedPtr end_timer =
             mission_control_node->create_wall_timer(
@@ -370,7 +387,7 @@ TEST(mission_control_package, mission_finished_test) {
         rclcpp::executors::SingleThreadedExecutor executor;
 
         std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>();
+            std::make_shared<MissionControl>(default_options);
 
         mission_control_node->active_node_id = "abc";
 
