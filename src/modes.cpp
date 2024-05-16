@@ -495,12 +495,10 @@ void MissionControl::mode_self_check() {
  *
  * This function checks if the drone configuration is valid by performing the
  * following checks:
- * 1. Check that all heartbeats were received and all nodes are in the correct
- * configuration
- * 2. Check if position is inside of geofence.
- * 3. Check that drone is on the ground.
+ * 1. Check if position is inside of geofence.
+ * 2. Check that drone is on the ground.
  *
- * @note Aborts after 30s if not all conditions were met. After performing the
+ * @note Aborts after 60s if not all conditions were met. After performing the
  * checks, the mission state is set to `armed`.
  */
 void MissionControl::mode_check_drone_configuration() {
@@ -515,11 +513,10 @@ void MissionControl::mode_check_drone_configuration() {
         i = 0;
     }
 
-    const uint32_t max_wait_time = (30 * 1000) / event_loop_time_delta_ms;
+    const uint32_t max_wait_time = (60 * 1000) / event_loop_time_delta_ms;
     if (i % (1000 / event_loop_time_delta_ms) == 0) {
         // Creating helpful log message
         std::vector<std::string> missing_conditions = {};
-        if (!heartbeat_received_all) missing_conditions.push_back("heartbeats");
         if (current_landed_state != interfaces::msg::LandedState::ON_GROUND)
             missing_conditions.push_back("landed state 'ON_GROUND'");
         if (current_flight_mode != interfaces::msg::FlightMode::HOLD)
@@ -558,10 +555,8 @@ void MissionControl::mode_check_drone_configuration() {
                       "timeframe");
     }
 
-    // Check that all heartbeats were received, FCC is in 'HOLD' state and drone
-    // is on the ground
-    if (heartbeat_received_all &&
-        current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
+    // Check that FCC is in 'HOLD' state and drone is on the ground
+    if (current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
         current_flight_mode == interfaces::msg::FlightMode::HOLD) {
         // Check that current position is in geofence
         try {
