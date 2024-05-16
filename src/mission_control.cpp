@@ -10,10 +10,21 @@ MissionControl::MissionControl(const rclcpp::NodeOptions &options)
             "src/mission_control_package/assets/mission_test.json";
 
         // Try to read parameter
-        mdf_file_path = this->declare_parameter<std::string>(
-            "MDF_FILE_PATH", mdf_default_file_path);
+        mdf_file_path =
+            this->declare_parameter<std::string>("MDF_FILE_PATH", "");
 
-        if (mdf_file_path == mdf_default_file_path) {
+        if (mdf_file_path.size() <= 0) {
+            RCLCPP_FATAL(
+                this->get_logger(),
+                "MissionControl::%s: 'MDF_FILE_PATH' parameter not set",
+                __func__);
+
+            exit(EXIT_FAILURE);
+        }
+
+        if (mdf_file_path == "DEFAULT") {
+            mdf_file_path = mdf_default_file_path;
+
             RCLCPP_WARN(this->get_logger(),
                         "MissionControl::%s: Using default Mission Definition "
                         "File at: '%s'",

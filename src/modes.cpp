@@ -390,6 +390,8 @@ void MissionControl::mode_detect_marker() {
  * This function performs a self-check by waiting for a good GPS signal and
  * checking if all heartbeats are received within a given timeframe (30s). If
  * the self-check fails, the mission is aborted.
+ *
+ * @note Aborts after 30s if not all conditions were met
  */
 void MissionControl::mode_self_check() {
     static uint32_t i;
@@ -493,29 +495,73 @@ void MissionControl::mode_self_check() {
  *
  * This function checks if the drone configuration is valid by performing the
  * following checks:
- * 1. Check if position is inside of geofence.
- * 2. Check that drone is on the ground.
+ * 1. Check that all heartbeats were received and all nodes are in the correct
+ * configuration
+ * 2. Check if position is inside of geofence.
+ * 3. Check that drone is on the ground.
  *
- * @note After performing the checks, the mission state is set to armed.
+ * @note Aborts after 30s if not all conditions were met. After performing the
+ * checks, the mission state is set to `armed`.
  */
 void MissionControl::mode_check_drone_configuration() {
+    static uint32_t i;
+
     if (get_state_first_loop()) {
         RCLCPP_INFO(this->get_logger(),
                     "MissionControl::%s: Check "
                     "drone configuration started",
                     __func__);
         set_standby_config();
-
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Waiting for landed state '%u' "
-                    "(currently: '%u') and flight mode '%u' (currently: '%u')",
-                    __func__, interfaces::msg::LandedState::ON_GROUND,
-                    current_landed_state, interfaces::msg::FlightMode::HOLD,
-                    current_flight_mode);
+        i = 0;
     }
 
-    // Check that FCC is in 'HOLD' state and drone is on the ground
-    if (current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
+    const uint32_t max_wait_time = (30 * 1000) / event_loop_time_delta_ms;
+    if (i % (1000 / event_loop_time_delta_ms) == 0) {
+        // Creating helpful log message
+        std::vector<std::string> missing_conditions = {};
+        if (!heartbeat_received_all) missing_conditions.push_back("heartbeats");
+        if (current_landed_state != interfaces::msg::LandedState::ON_GROUND)
+            missing_conditions.push_back("landed state 'ON_GROUND'");
+        if (current_flight_mode != interfaces::msg::FlightMode::HOLD)
+            missing_conditions.push_back("flight mode 'HOLD'");
+
+        std::string missing_conditions_str = "";
+        {
+            size_t i = 0;
+
+            for (const auto &mc : missing_conditions) {
+                if (i > 0) missing_conditions_str += ", ";
+                missing_conditions_str += mc;
+                i++;
+            }
+        }
+
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Waiting for: [%s]: "
+                    "%us / %us",
+                    __func__, missing_conditions_str.c_str(),
+                    (i * event_loop_time_delta_ms) / 1000,
+                    (max_wait_time * event_loop_time_delta_ms) / 1000);
+    }
+
+    i++;
+
+    if (i >= max_wait_time) {
+        RCLCPP_FATAL(
+            this->get_logger(),
+            "MissionControl::%s: Check drone configuration failed: Not all "
+            "conditions met in the given timeframe (%us)",
+            __func__, (max_wait_time * event_loop_time_delta_ms) / 1000);
+        mission_abort("MissionControl::" + (std::string) __func__ +
+                      ": Check drone configuration failed: Not all conditions "
+                      "met in the given "
+                      "timeframe");
+    }
+
+    // Check that all heartbeats were received, FCC is in 'HOLD' state and drone
+    // is on the ground
+    if (heartbeat_received_all &&
+        current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
         current_flight_mode == interfaces::msg::FlightMode::HOLD) {
         // Check that current position is in geofence
         try {
