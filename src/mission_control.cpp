@@ -14,10 +14,10 @@ MissionControl::MissionControl(const rclcpp::NodeOptions &options)
             this->declare_parameter<std::string>("MDF_FILE_PATH", "");
 
         if (mdf_file_path.size() <= 0) {
-            RCLCPP_FATAL(
-                this->get_logger(),
-                "MissionControl::%s: 'MDF_FILE_PATH' parameter not set",
-                __func__);
+            RCLCPP_FATAL(this->get_logger(),
+                         "MissionControl::%s: 'MDF_FILE_PATH' parameter not "
+                         "set. Exiting.",
+                         __func__);
 
             exit(EXIT_FAILURE);
         }
