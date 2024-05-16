@@ -411,8 +411,6 @@ void MissionControl::mode_self_check() {
         std::vector<std::string> missing_conditions = {};
         if (!heartbeat_received_all) missing_conditions.push_back("heartbeats");
         if (!drone_health_ok) missing_conditions.push_back("drone health");
-        if (current_landed_state != interfaces::msg::LandedState::ON_GROUND)
-            missing_conditions.push_back("drone on ground");
 
         std::string missing_conditions_str = "";
         {
@@ -447,10 +445,8 @@ void MissionControl::mode_self_check() {
             "timeframe");
     }
 
-    // Check that all heartbeats were received, drone health is good and drone
-    // is on ground
-    if (heartbeat_received_all && drone_health_ok &&
-        current_landed_state == interfaces::msg::LandedState::ON_GROUND) {
+    // Check that all heartbeats were received and drone health is good
+    if (heartbeat_received_all && drone_health_ok) {
         {
             // Send safety settings to FCC bridge
             mission_file_lib::safety safety_settings =
@@ -521,6 +517,7 @@ void MissionControl::mode_check_drone_configuration() {
     if (i % (1000 / event_loop_time_delta_ms) == 0) {
         // Creating helpful log message
         std::vector<std::string> missing_conditions = {};
+        if (!drone_health_ok) missing_conditions.push_back("drone health");
         if (current_landed_state != interfaces::msg::LandedState::ON_GROUND)
             missing_conditions.push_back("landed state 'ON_GROUND'");
         if (current_flight_mode != interfaces::msg::FlightMode::HOLD)
@@ -559,8 +556,10 @@ void MissionControl::mode_check_drone_configuration() {
                       "timeframe");
     }
 
-    // Check that FCC is in 'HOLD' state and drone is on the ground
-    if (current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
+    // Check that drone health is good, FCC is in 'HOLD' state, and drone is on
+    // the ground
+    if (drone_health_ok &&
+        current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
         current_flight_mode == interfaces::msg::FlightMode::HOLD) {
         // Check that current position is in geofence
         try {
