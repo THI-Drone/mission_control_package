@@ -12,6 +12,14 @@
 #include "rclcpp/node.hpp"
 #include "rclcpp/node_options.hpp"
 
+/**
+ * @brief Test case for the `set_mission_state` function in the
+ * `mission_control_package`.
+ *
+ * This test verifies the behavior of the `set_mission_state` function in
+ * different scenarios. It checks if the mission state is correctly set and if
+ * the internal variables are updated accordingly.
+ */
 TEST(mission_control_package, set_mission_state_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -49,6 +57,14 @@ TEST(mission_control_package, set_mission_state_test) {
     }
 }
 
+/**
+ * @brief Test case for the `set_active_node_id` function in the
+ * `mission_control_package`.
+ *
+ * This test verifies the behavior of the `set_active_node_id` function in the
+ * `MissionControl` class. It tests the function with both no previous active
+ * node ID and with a previous active node ID.
+ */
 TEST(mission_control_package, set_active_node_id_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -84,6 +100,14 @@ TEST(mission_control_package, set_active_node_id_test) {
     }
 }
 
+/**
+ * @brief Test case for the `clear_active_node_id` function in the
+ * `mission_control_package`.
+ *
+ * This test verifies the behavior of the `clear_active_node_id` function in the
+ * `MissionControl` class. It tests the function with both no previous active
+ * node ID and with a previous active node ID.
+ */
 TEST(mission_control_package, clear_active_node_id_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -119,6 +143,14 @@ TEST(mission_control_package, clear_active_node_id_test) {
     }
 }
 
+/**
+ * @brief Test case for the `set_standby_config_test` function in the
+ * `mission_control_package`.
+ *
+ * This test verifies the behavior of the `set_standby_config` function in the
+ * `MissionControl` class. It tests the function with two scenarios: one with no
+ * previous active node ID and one with a previous active node ID.
+ */
 TEST(mission_control_package, set_standby_config_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -154,6 +186,14 @@ TEST(mission_control_package, set_standby_config_test) {
     }
 }
 
+/**
+ * @brief Test case for the `set_active_marker_name` function in the
+ * `mission_control_package`.
+ *
+ * This test verifies the behavior of the `set_active_marker_name` function in
+ * the `MissionControl` class. It tests both the case where no previous marker
+ * name is set and the case where a previous marker name is set.
+ */
 TEST(mission_control_package, set_active_marker_name_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -181,6 +221,14 @@ TEST(mission_control_package, set_active_marker_name_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case checks the behavior of the probation period in the
+ * mission_control_package. It verifies that the probation period is triggered
+ * correctly and that the active node ID and last active node ID are updated
+ * accordingly.
+ */
 TEST(mission_control_package, probation_period_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -332,6 +380,14 @@ TEST(mission_control_package, probation_period_test) {
     }
 }
 
+/**
+ * @brief Test case for the `get_state_first_loop` function in the
+ * `mission_control_package`.
+ *
+ * This test verifies the behavior of the `get_state_first_loop` function in
+ * different scenarios. It checks if the function returns the correct value
+ * based on the value of `state_first_loop`.
+ */
 TEST(mission_control_package, get_state_first_loop_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -356,6 +412,15 @@ TEST(mission_control_package, get_state_first_loop_test) {
     }
 }
 
+/**
+ * @brief Test case for the `get_job_finished_successfully_test` function in the
+ * `mission_control_package`.
+ *
+ * This test verifies the behavior of the `get_job_finished_successfully`
+ * function in the `MissionControl` class. It tests the function with both
+ * `job_finished_successfully` set to false and true, and checks the expected
+ * return values.
+ */
 TEST(mission_control_package, get_job_finished_successfully_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -380,6 +445,14 @@ TEST(mission_control_package, get_job_finished_successfully_test) {
     }
 }
 
+/**
+ * @brief Test case for the `get_job_finished_payload` function in the
+ * `mission_control_package`.
+ *
+ * This test verifies the behavior of the `get_job_finished_payload` function in
+ * the `MissionControl` class. It tests the function with both the
+ * 'get_job_finished_payload' parameter not set and set.
+ */
 TEST(mission_control_package, get_job_finished_payload_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -403,6 +476,16 @@ TEST(mission_control_package, get_job_finished_payload_test) {
     }
 }
 
+/**
+ * @brief Test case for the `current_mission_finished` function in the
+ * `mission_control_package`.
+ *
+ * This test verifies the behavior of the `current_mission_finished` function
+ * under different values of `mission_progress`. It creates a `MissionControl`
+ * object with default options and sets the `mission_progress` to different
+ * values. Then, it asserts the expected behavior of the
+ * `current_mission_finished` function and the `mission_progress` value.
+ */
 TEST(mission_control_package, current_mission_finished_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -453,6 +536,26 @@ TEST(mission_control_package, current_mission_finished_test) {
     }
 }
 
+/**
+ * @brief Test case for the `mission_control_package` module's `wait_time_test`.
+ *
+ * This test case verifies the functionality of the `wait_time` feature in the
+ * `MissionControl` class. It checks the behavior of the `wait_time` method with
+ * different wait times and validates the accuracy of the wait time.
+ *
+ * Test Steps:
+ * 1. Create a `MissionControl` node with default options.
+ * 2. Deactivate the event loop to isolate the test.
+ * 3. Set the desired wait time and time offset.
+ * 4. Start the wait time and record the start timestamp.
+ * 5. Create a timer to periodically check if the wait time has finished.
+ * 6. If the wait time has finished, calculate the actual time difference and
+ * validate it against the expected time difference.
+ * 7. If the wait time has not finished, continue checking until it finishes or
+ * exceeds the maximum allowed time.
+ * 8. Cancel the timers and stop the executor.
+ * 9. Repeat the above steps for different wait times.
+ */
 TEST(mission_control_package, wait_time_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -722,6 +825,15 @@ TEST(mission_control_package, wait_time_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case verifies the behavior of the `get_mission_state_str` function
+ * in the MissionControl class. It tests the function with different mission
+ * states and checks if the returned string matches the expected value. It also
+ * tests the function with an invalid mission state and verifies if it throws a
+ * `std::runtime_error`.
+ */
 TEST(mission_control_package, get_mission_state_str_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");

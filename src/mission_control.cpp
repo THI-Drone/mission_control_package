@@ -2,6 +2,14 @@
 
 using std::placeholders::_1;
 
+/**
+ * @brief Constructor for the MissionControl class.
+ *
+ * @note The `MDF_FILE_PATH` must be provided either through the NodeOptions
+ * or as a ROS parameter. Set it to `DEFAULT` to use the default file path.
+ *
+ * @param options The optioanl NodeOptions for the node.
+ */
 MissionControl::MissionControl(const rclcpp::NodeOptions &options)
     : CommonNode("mission_control", options) {
     // Path to mission definition file
@@ -13,6 +21,7 @@ MissionControl::MissionControl(const rclcpp::NodeOptions &options)
         mdf_file_path =
             this->declare_parameter<std::string>("MDF_FILE_PATH", "");
 
+        // Check if no parameter was provided
         if (mdf_file_path.size() <= 0) {
             RCLCPP_FATAL(this->get_logger(),
                          "MissionControl::%s: 'MDF_FILE_PATH' parameter not "
@@ -23,6 +32,9 @@ MissionControl::MissionControl(const rclcpp::NodeOptions &options)
         }
 
         if (mdf_file_path == "DEFAULT") {
+            // Default parameter was provided. Therefore, the default file path
+            // will be used.
+
             mdf_file_path = mdf_default_file_path;
 
             RCLCPP_WARN(this->get_logger(),
@@ -30,6 +42,8 @@ MissionControl::MissionControl(const rclcpp::NodeOptions &options)
                         "File at: '%s'",
                         __func__, mdf_default_file_path.c_str());
         } else {
+            // A custom parameter was provided and will be used
+
             RCLCPP_INFO(this->get_logger(),
                         "MissionControl::%s: Using custom Mission Definition "
                         "File at: '%s'",

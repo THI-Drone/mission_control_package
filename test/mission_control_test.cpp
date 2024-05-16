@@ -16,6 +16,19 @@
 #include "interfaces/msg/control.hpp"
 #include "interfaces/msg/mission_finished.hpp"
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case checks the behavior of the constructor in the MissionControl
+ * class. It verifies the following scenarios:
+ * 1. Constructor with default file: It checks if the constructor correctly
+ * initializes the MissionControl object with the default file path.
+ * 2. Constructor with invalid parameter: It checks if the constructor throws an
+ * exception when an invalid parameter is passed.
+ * 3. Constructor with non-existent file path: It checks if the constructor
+ * correctly initializes the MissionControl object with a non-existent file path
+ * and if the executor throws an exception when the node is added and spun.
+ */
 TEST(mission_control_package, constructor_test) {
     // Check constructor with default file
     {
@@ -60,6 +73,15 @@ TEST(mission_control_package, constructor_test) {
     }
 }
 
+/**
+ * @brief Test case for the `mission_control_package` module's
+ * `send_control_test` function.
+ *
+ * This test case verifies the behavior of the `send_control_test` function in
+ * the `mission_control_package` module. It checks different scenarios where the
+ * `active` flag is set to true or false, and the target node ID matches or
+ * doesn't match the active node ID.
+ */
 TEST(mission_control_package, send_control_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -226,6 +248,14 @@ TEST(mission_control_package, send_control_test) {
     }
 }
 
+/**
+ * @brief Test case for the `mission_control_package` module's
+ * `send_control_json_test` function.
+ *
+ * This test case checks the behavior of the `send_control_json` function in the
+ * `MissionControl` class. It verifies the handling of both valid and invalid
+ * JSON payloads.
+ */
 TEST(mission_control_package, send_control_json_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -308,6 +338,15 @@ TEST(mission_control_package, send_control_json_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_abort function in the
+ * mission_control_package.
+ *
+ * This test case verifies the behavior of the mission_abort function in
+ * different scenarios. It creates a mission_control_node and tests the function
+ * with and without an active node. The mission_abort function is expected to
+ * abort the mission and log a debug message.
+ */
 TEST(mission_control_package, mission_abort_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
@@ -357,6 +396,14 @@ TEST(mission_control_package, mission_abort_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_finished_test.
+ *
+ * This test case verifies the behavior of the mission_finished_test function in
+ * the mission_control_package. It tests two scenarios: one without any active
+ * node and one with an active node. The test uses the ASSERT_DEATH macro to
+ * check if the expected behavior is triggered.
+ */
 TEST(mission_control_package, mission_finished_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");

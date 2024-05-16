@@ -14,6 +14,12 @@
 
 using namespace mission_file_lib;
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case verifies the functionality of the file_read_test.
+ * It tests the MissionDefinitionReader's ability to read mission files.
+ */
 TEST(mission_control_package, file_read_test) {
     {
         // Test correct file path
@@ -34,6 +40,14 @@ TEST(mission_control_package, file_read_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case verifies the file format of the mission definition files.
+ * It includes multiple sub-tests to check different scenarios such as correct
+ * file formatting, empty file, incorrect JSON file, missing keys, invalid
+ * safety values, duplicate points, and other edge cases.
+ */
 TEST(mission_control_package, file_format_test) {
     {
         // Test correct file formatting
@@ -219,6 +233,14 @@ TEST(mission_control_package, file_format_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case verifies the functionality of the file_save_test in the
+ * mission_control_package. It checks that the geofence points were read and
+ * stored correctly, and also verifies the other safety settings. Additionally,
+ * it checks the marker commands for different markers.
+ */
 TEST(mission_control_package, file_save_test) {
     // Dry-run mode
     {
