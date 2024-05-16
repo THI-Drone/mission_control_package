@@ -387,7 +387,7 @@ void MissionControl::mode_detect_marker() {
 /**
  * @brief Executes the self-check of the mission control.
  *
- * This function performs a self-check by waiting for a good GPS signal and
+ * This function performs a self-check by waiting for a good drone health and
  * checking if all heartbeats are received within a given timeframe (30s). If
  * the self-check fails, the mission is aborted.
  *
@@ -495,6 +495,8 @@ void MissionControl::mode_self_check() {
  * following checks:
  * 1. Check if position is inside of geofence.
  * 2. Check that drone is on the ground.
+ * 3. Check that the drone health is good.
+ * 4. Check that the current flight mode is `HOLD`.
  *
  * @note Aborts after 60s if not all conditions were met. After performing the
  * checks, the mission state is set to `armed`.
