@@ -5,24 +5,25 @@
  * standby configuration.
  */
 void MissionControl::mode_prepare_mission() {
-    if (get_state_first_loop()) {
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Prepare mission started", __func__);
-        set_standby_config();
+    // Deactivate Event Loop as it is not needed for prepare mission
+    EventLoopGuard elg(&event_loop_active, false);
 
-        try {
-            mission_definition_reader.read_file(mdf_file_path, false);
-        } catch (const std::runtime_error &e) {
-            mission_abort("MissionControl::" + (std::string) __func__ +
-                          ": Failed to read mission "
-                          "file: " +
-                          (std::string)e.what());
-        }
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::%s: Prepare mission started", __func__);
+    set_standby_config();
 
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Prepare mission finished", __func__);
-        set_mission_state(selfcheck);
+    try {
+        mission_definition_reader.read_file(mdf_file_path, false);
+    } catch (const std::runtime_error &e) {
+        mission_abort("MissionControl::" + (std::string) __func__ +
+                      ": Failed to read mission "
+                      "file: " +
+                      (std::string)e.what());
     }
+
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::%s: Prepare mission finished", __func__);
+    set_mission_state(selfcheck);
 }
 
 /**
@@ -106,7 +107,9 @@ void MissionControl::initiate_takeoff() {
         RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Takeoff finished",
                     __func__);
 
+        // Deactivate Mission Control
         this->deactivate();
+        send_control_json(this->get_name(), false, {});
         clear_active_node_id();
 
         set_mission_state(decision_maker);

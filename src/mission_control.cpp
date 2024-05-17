@@ -294,10 +294,8 @@ void MissionControl::mission_abort(std::string reason) {
                      __func__, get_mission_state());
     }
 
-    // Explicitly deactivate currently active node (if not mission control or
-    // empty)
-    if (get_active_node_id().size() > 0 &&
-        get_active_node_id() != this->get_name()) {
+    // Explicitly deactivate currently active node (if not empty)
+    if (get_active_node_id().size() > 0) {
         RCLCPP_INFO(
             this->get_logger(),
             "MissionControl::%s: Explicitly deactivated active node: '%s'",
@@ -339,10 +337,8 @@ void MissionControl::mission_finished() {
     RCLCPP_INFO(this->get_logger(),
                 "MissionControl::%s: Mission finished successfully", __func__);
 
-    // Explicitly deactivate currently active node (if not mission control or
-    // empty)
-    if (get_active_node_id().size() > 0 &&
-        get_active_node_id() != this->get_name()) {
+    // Explicitly deactivate currently active node (if not empty)
+    if (get_active_node_id().size() > 0) {
         RCLCPP_INFO(
             this->get_logger(),
             "MissionControl::%s: Explicitly deactivated active node: '%s'",
