@@ -216,8 +216,8 @@ void MissionControl::mode_decision_maker() {
     else if (current_command_type == "end_mission")
         mission_finished();
     else
-        mission_abort("MissionControl::" + (std::string) __func__ +
-                      ": Unknown command type");
+        mission_abort((std::string) "MissionControl::" + __func__ +
+                      ": Unknown command type: '" + current_command_type + "'");
 }
 
 /**
