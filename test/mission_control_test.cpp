@@ -505,6 +505,13 @@ TEST(mission_control_package, mission_finished_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case verifies the behavior of the event loop in the mission control
+ * package. It creates a custom mission control node and sets different mission
+ * states to test the execution of various functions within the event loop.
+ */
 TEST(mission_control_package, event_loop_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
