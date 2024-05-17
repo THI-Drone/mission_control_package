@@ -12,12 +12,14 @@
 #include <vector>
 
 #include "common_package/common_node.hpp"
+#include "common_package/node_names.hpp"
 #include "common_package/topic_names.hpp"
 #include "event_loop_guard.hpp"
 #include "mission_definition_file.hpp"
 #include "rclcpp/node_options.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "structs.hpp"
+
 
 // Message includes
 #include "interfaces/msg/control.hpp"
@@ -71,9 +73,9 @@ class MissionControl : public common_lib::CommonNode {
                //!< change is happening. Will be set to false when calling
                //!< get_state_first_loop().
     std::map<std::string, ros_node> node_map = {
-        {"fcc_bridge", ros_node(true, true)},
-        {"waypoint_node", {}},
-        {"qr_code_scanner_node",
+        {common_lib::node_names::FCC_BRIDGE, ros_node(true, true)},
+        {common_lib::node_names::WAYPOINT, {}},
+        {common_lib::node_names::QRCODE_SCANNER,
          {}}};  //!< Register all the nodes for the heartbeat
     std::string active_node_id =
         "";  //!< node_id that is currently allowed to send data to the FCC

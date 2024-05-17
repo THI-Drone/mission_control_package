@@ -11,7 +11,7 @@ using std::placeholders::_1;
  * @param options The optional NodeOptions for the node.
  */
 MissionControl::MissionControl(const rclcpp::NodeOptions &options)
-    : CommonNode("mission_control", options) {
+    : CommonNode(common_lib::node_names::MISSION_CONTROL, options) {
     // Path to mission definition file
     try {
         const std::string mdf_default_file_path =

@@ -253,7 +253,7 @@ void MissionControl::mode_fly_to_waypoint() {
                           commands.at(current_command_id).type + "'");
 
         // Activate Waypoint Node and send the command data as payload
-        send_control_json("waypoint_node", true,
+        send_control_json(common_lib::node_names::WAYPOINT, true,
                           commands.at(current_command_id).data);
 
         // Calculate timeout
@@ -328,7 +328,7 @@ void MissionControl::mode_detect_marker() {
                           commands.at(current_command_id).type + "'");
 
         // Activate QR Code Scanner Node and send the command data as payload
-        send_control_json("qr_code_scanner_node", true,
+        send_control_json(common_lib::node_names::QRCODE_SCANNER, true,
                           commands.at(current_command_id).data);
 
         // Start timeout timer
