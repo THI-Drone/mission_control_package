@@ -20,7 +20,6 @@
 #include "rclcpp/rclcpp.hpp"
 #include "structs.hpp"
 
-
 // Message includes
 #include "interfaces/msg/control.hpp"
 #include "interfaces/msg/flight_mode.hpp"
