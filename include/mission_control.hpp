@@ -256,32 +256,20 @@ class MissionControl : public common_lib::CommonNode {
     void set_active_marker_name(const std::string &new_active_marker_name);
     std::string get_active_marker_name() const { return active_marker_name; }
 
-    // Prepare Mission
-    void mode_prepare_mission();
-
-    // Selfcheck
-    void mode_self_check();
-
-    // Check drone configuration
-    void mode_check_drone_configuration();
+    // Modes - only virtual for tests to override this functionality
+    virtual void mode_prepare_mission();
+    virtual void mode_self_check();
+    virtual void mode_check_drone_configuration();
+    virtual void initiate_takeoff();
+    virtual void mode_decision_maker();
+    virtual void mode_fly_to_waypoint();
+    virtual void mode_detect_marker();
 
     // Job finished
     void job_finished_callback(const interfaces::msg::JobFinished &msg);
 
     // Mission start
     void mission_start(const interfaces::msg::MissionStart &msg);
-
-    // Takeoff
-    void initiate_takeoff();
-
-    // Decision Maker
-    void mode_decision_maker();
-
-    // Fly to waypoint
-    void mode_fly_to_waypoint();
-
-    // Detect marker
-    void mode_detect_marker();
 
     // Control Functions
     void send_control(const std::string &target_id, const bool active,

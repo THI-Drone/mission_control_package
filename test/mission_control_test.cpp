@@ -504,3 +504,442 @@ TEST(mission_control_package, mission_finished_test) {
         ASSERT_DEATH({ executor.spin(); }, ".*");
     }
 }
+
+TEST(mission_control_package, event_loop_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/"
+        "mission_file_reader/test_assets/mdf_correct.json");
+
+    class CustomMissionControl : public MissionControl {
+       public:
+        size_t mode_prepare_mission_counter = 0;
+        size_t mode_self_check_counter = 0;
+        size_t mode_check_drone_configuration_counter = 0;
+        size_t initiate_takeoff_counter = 0;
+        size_t mode_decision_maker_counter = 0;
+        size_t mode_fly_to_waypoint_counter = 0;
+        size_t mode_detect_marker_counter = 0;
+
+       public:
+        CustomMissionControl(
+            const rclcpp::NodeOptions &options = rclcpp::NodeOptions())
+            : MissionControl(options) {}
+
+        void mode_prepare_mission() override {
+            RCLCPP_DEBUG(this->get_logger(), "Custom function '%s' called",
+                         __func__);
+
+            mode_prepare_mission_counter++;
+        }
+
+        void mode_self_check() override {
+            RCLCPP_DEBUG(this->get_logger(), "Custom function '%s' called",
+                         __func__);
+
+            mode_self_check_counter++;
+        }
+
+        void mode_check_drone_configuration() override {
+            RCLCPP_DEBUG(this->get_logger(), "Custom function '%s' called",
+                         __func__);
+
+            mode_check_drone_configuration_counter++;
+        }
+
+        void initiate_takeoff() override {
+            RCLCPP_DEBUG(this->get_logger(), "Custom function '%s' called",
+                         __func__);
+
+            initiate_takeoff_counter++;
+        }
+
+        void mode_decision_maker() override {
+            RCLCPP_DEBUG(this->get_logger(), "Custom function '%s' called",
+                         __func__);
+
+            mode_decision_maker_counter++;
+        }
+
+        void mode_fly_to_waypoint() override {
+            RCLCPP_DEBUG(this->get_logger(), "Custom function '%s' called",
+                         __func__);
+
+            mode_fly_to_waypoint_counter++;
+        }
+
+        void mode_detect_marker() override {
+            RCLCPP_DEBUG(this->get_logger(), "Custom function '%s' called",
+                         __func__);
+
+            mode_detect_marker_counter++;
+        }
+    };
+
+    // Check state 'prepare_mission'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<CustomMissionControl> mission_control_node =
+            std::make_shared<CustomMissionControl>(default_options);
+
+        mission_control_node->set_mission_state(
+            MissionControl::prepare_mission);
+
+        const uint32_t timer_executions = 5;
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    mission_control_node->event_loop_time_delta_ms *
+                    timer_executions),
+                [mission_control_node, &executor, timer_executions]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending event loop test");
+
+                    // Check that counts are correct
+                    ASSERT_EQ(
+                        timer_executions,
+                        mission_control_node->mode_prepare_mission_counter);
+
+                    ASSERT_EQ(0, mission_control_node->mode_self_check_counter);
+                    ASSERT_EQ(0, mission_control_node
+                                     ->mode_check_drone_configuration_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->initiate_takeoff_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_decision_maker_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_fly_to_waypoint_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->mode_detect_marker_counter);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check state 'selfcheck'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<CustomMissionControl> mission_control_node =
+            std::make_shared<CustomMissionControl>(default_options);
+
+        mission_control_node->set_mission_state(MissionControl::selfcheck);
+
+        const uint32_t timer_executions = 5;
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    mission_control_node->event_loop_time_delta_ms *
+                    timer_executions),
+                [mission_control_node, &executor, timer_executions]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending event loop test");
+
+                    // Check that counts are correct
+                    ASSERT_EQ(timer_executions,
+                              mission_control_node->mode_self_check_counter);
+
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_prepare_mission_counter);
+                    ASSERT_EQ(0, mission_control_node
+                                     ->mode_check_drone_configuration_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->initiate_takeoff_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_decision_maker_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_fly_to_waypoint_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->mode_detect_marker_counter);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check state 'check_drone_configuration'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<CustomMissionControl> mission_control_node =
+            std::make_shared<CustomMissionControl>(default_options);
+
+        mission_control_node->set_mission_state(
+            MissionControl::check_drone_configuration);
+
+        const uint32_t timer_executions = 5;
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    mission_control_node->event_loop_time_delta_ms *
+                    timer_executions),
+                [mission_control_node, &executor, timer_executions]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending event loop test");
+
+                    // Check that counts are correct
+                    ASSERT_EQ(timer_executions,
+                              mission_control_node
+                                  ->mode_check_drone_configuration_counter);
+
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_prepare_mission_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_self_check_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->initiate_takeoff_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_decision_maker_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_fly_to_waypoint_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->mode_detect_marker_counter);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check state 'armed'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<CustomMissionControl> mission_control_node =
+            std::make_shared<CustomMissionControl>(default_options);
+
+        mission_control_node->set_mission_state(MissionControl::armed);
+
+        const uint32_t timer_executions = 5;
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    mission_control_node->event_loop_time_delta_ms *
+                    timer_executions),
+                [mission_control_node, &executor, timer_executions]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending event loop test");
+
+                    // Check that counts are correct
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_prepare_mission_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_self_check_counter);
+                    ASSERT_EQ(0, mission_control_node
+                                     ->mode_check_drone_configuration_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->initiate_takeoff_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_decision_maker_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_fly_to_waypoint_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->mode_detect_marker_counter);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check state 'takeoff'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<CustomMissionControl> mission_control_node =
+            std::make_shared<CustomMissionControl>(default_options);
+
+        mission_control_node->set_mission_state(MissionControl::takeoff);
+
+        const uint32_t timer_executions = 5;
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    mission_control_node->event_loop_time_delta_ms *
+                    timer_executions),
+                [mission_control_node, &executor, timer_executions]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending event loop test");
+
+                    // Check that counts are correct
+                    ASSERT_EQ(timer_executions,
+                              mission_control_node->initiate_takeoff_counter);
+
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_prepare_mission_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_self_check_counter);
+                    ASSERT_EQ(0, mission_control_node
+                                     ->mode_check_drone_configuration_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_decision_maker_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_fly_to_waypoint_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->mode_detect_marker_counter);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check state 'decision_maker'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<CustomMissionControl> mission_control_node =
+            std::make_shared<CustomMissionControl>(default_options);
+
+        mission_control_node->set_mission_state(MissionControl::decision_maker);
+
+        const uint32_t timer_executions = 5;
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    mission_control_node->event_loop_time_delta_ms *
+                    timer_executions),
+                [mission_control_node, &executor, timer_executions]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending event loop test");
+
+                    // Check that counts are correct
+                    ASSERT_EQ(
+                        timer_executions,
+                        mission_control_node->mode_decision_maker_counter);
+
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_prepare_mission_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_self_check_counter);
+                    ASSERT_EQ(0, mission_control_node
+                                     ->mode_check_drone_configuration_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->initiate_takeoff_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_fly_to_waypoint_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->mode_detect_marker_counter);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check state 'fly_to_waypoint'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<CustomMissionControl> mission_control_node =
+            std::make_shared<CustomMissionControl>(default_options);
+
+        mission_control_node->set_mission_state(
+            MissionControl::fly_to_waypoint);
+
+        const uint32_t timer_executions = 5;
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    mission_control_node->event_loop_time_delta_ms *
+                    timer_executions),
+                [mission_control_node, &executor, timer_executions]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending event loop test");
+
+                    // Check that counts are correct
+                    ASSERT_EQ(
+                        timer_executions,
+                        mission_control_node->mode_fly_to_waypoint_counter);
+
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_prepare_mission_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_self_check_counter);
+                    ASSERT_EQ(0, mission_control_node
+                                     ->mode_check_drone_configuration_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->initiate_takeoff_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_decision_maker_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->mode_detect_marker_counter);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check state 'detect_marker'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<CustomMissionControl> mission_control_node =
+            std::make_shared<CustomMissionControl>(default_options);
+
+        mission_control_node->set_mission_state(MissionControl::detect_marker);
+
+        const uint32_t timer_executions = 5;
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    mission_control_node->event_loop_time_delta_ms *
+                    timer_executions),
+                [mission_control_node, &executor, timer_executions]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending event loop test");
+
+                    // Check that counts are correct
+                    ASSERT_EQ(timer_executions,
+                              mission_control_node->mode_detect_marker_counter);
+
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_prepare_mission_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_self_check_counter);
+                    ASSERT_EQ(0, mission_control_node
+                                     ->mode_check_drone_configuration_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->initiate_takeoff_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_decision_maker_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_fly_to_waypoint_counter);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check invalid state
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<CustomMissionControl> mission_control_node =
+            std::make_shared<CustomMissionControl>(default_options);
+
+        mission_control_node->mission_state =
+            (MissionControl::MissionState_t)-1;
+
+        executor.add_node(mission_control_node);
+
+        ASSERT_DEATH({ executor.spin(); }, ".*");
+    }
+}

@@ -280,8 +280,19 @@ void MissionControl::mission_abort(std::string reason) {
                 "MissionControl::%s: Current active node: '%s'%s", __func__,
                 get_active_node_id().c_str(), last_active_node_id_str.c_str());
 
-    RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Internal state: '%s'",
-                __func__, get_mission_state_str());
+    try {
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Internal state: '%s'", __func__,
+                    get_mission_state_str());
+    } catch (const std::runtime_error &e) {
+        RCLCPP_ERROR(this->get_logger(),
+                     "MissionControl::%s: Failed to print mission state: %s",
+                     __func__, e.what());
+
+        RCLCPP_ERROR(this->get_logger(),
+                     "MissionControl::%s: Internal state: '%d' [INVALID]",
+                     __func__, get_mission_state());
+    }
 
     // Explicitly deactivate currently active node (if not mission control or
     // empty)
