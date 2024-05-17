@@ -217,7 +217,7 @@ class MissionControl : public common_lib::CommonNode {
         health_subscription;
 
    public:
-    MissionControl(const rclcpp::NodeOptions &options = rclcpp::NodeOptions());
+    MissionControl(const rclcpp::NodeOptions &options);
 
     // Event Loop
     void event_loop();

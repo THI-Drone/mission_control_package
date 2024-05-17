@@ -8,7 +8,7 @@ using std::placeholders::_1;
  * @note The `MDF_FILE_PATH` must be provided either through the NodeOptions
  * or as a ROS parameter. Set it to `DEFAULT` to use the default file path.
  *
- * @param options The optioanl NodeOptions for the node.
+ * @param options The optional NodeOptions for the node.
  */
 MissionControl::MissionControl(const rclcpp::NodeOptions &options)
     : CommonNode("mission_control", options) {
