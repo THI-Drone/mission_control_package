@@ -4,6 +4,7 @@
 #include <cinttypes>
 #include <nlohmann/json.hpp>
 
+#include "common_package/commands.hpp"
 #include "common_package/common_node.hpp"
 #include "common_package/node_names.hpp"
 #include "common_package/topic_names.hpp"
@@ -443,5 +444,147 @@ TEST(mission_control_package, mode_decision_maker_test) {
         // This should fail because command list is empty
         mission_control.set_mission_state(MissionControl::decision_maker);
         ASSERT_DEATH({ mission_control.mode_decision_maker(); }, ".*");
+    }
+}
+
+TEST(mission_control_package, mode_fly_to_waypoint_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/"
+        "mission_file_reader/test_assets/mdf_correct.json");
+
+    // Fully working fly to waypoint procedure
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // To make sure that a control message is only received once for each
+        // active state
+        bool control_true_flag = false;
+        bool control_false_flag = false;
+
+        // Create demo nodes
+        class OpenCommonNode : public common_lib::CommonNode {
+           public:
+            OpenCommonNode(const std::string &id) : CommonNode(id) {}
+
+            void activate_wrapper() { this->activate(); }
+            void deactivate_wrapper() { this->deactivate(); }
+            void job_finished_wrapper() { this->job_finished(); }
+        };
+
+        std::shared_ptr<common_lib::CommonNode> qr_code_scanner_node =
+            std::make_shared<common_lib::CommonNode>(
+                common_lib::node_names::QRCODE_SCANNER);
+
+        std::shared_ptr<OpenCommonNode> fcc_bridge =
+            std::make_shared<OpenCommonNode>(
+                common_lib::node_names::FCC_BRIDGE);
+        fcc_bridge->activate_wrapper();
+
+        // Create test node
+        std::shared_ptr<OpenCommonNode> waypoint_node =
+            std::make_shared<OpenCommonNode>(common_lib::node_names::WAYPOINT);
+
+        ASSERT_NO_THROW(mission_control_node->mode_prepare_mission());
+        ASSERT_NO_THROW(mission_control_node->mode_decision_maker());
+        ASSERT_EQ(MissionControl::fly_to_waypoint,
+                  mission_control_node->get_mission_state());
+
+        // Subscribe test node to Control topic
+        rclcpp::Subscription<interfaces::msg::Control>::SharedPtr control_sub =
+            waypoint_node->create_subscription<interfaces::msg::Control>(
+                common_lib::topic_names::Control, 10,
+                [waypoint_node, mission_control_node, &control_true_flag,
+                 &control_false_flag,
+                 &executor](interfaces::msg::Control::ConstSharedPtr msg) {
+                    RCLCPP_DEBUG(waypoint_node->get_logger(),
+                                 "Received control message: Active: %d",
+                                 msg->active);
+
+                    ASSERT_STREQ(waypoint_node->get_name(),
+                                 msg->target_id.c_str());
+
+                    if (msg->active) {
+                        ASSERT_FALSE(waypoint_node->get_active());
+                        waypoint_node->activate_wrapper();
+
+                        ASSERT_FALSE(control_true_flag);
+                        control_true_flag = true;
+
+                        // Check that payload is formatted correctly
+                        ASSERT_NO_THROW(
+                            common_lib::CommandDefinitions::
+                                parse_check_json_str(
+                                    msg->payload,
+                                    common_lib::CommandDefinitions::
+                                        get_waypoint_command_definition()));
+
+                        // Indicate that job is finished
+                        waypoint_node->job_finished_wrapper();
+                    } else {
+                        // Active should already be false as it is deactivated
+                        // in job_finished function
+                        ASSERT_FALSE(waypoint_node->get_active());
+
+                        ASSERT_FALSE(control_false_flag);
+                        control_false_flag = true;
+
+                        executor.cancel();
+                    }
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(waypoint_node);
+
+        executor.add_node(qr_code_scanner_node);
+        executor.add_node(fcc_bridge);
+
+        executor.spin();
+
+        // Activate one more time for cleanup
+        mission_control_node->mode_fly_to_waypoint();
+
+        ASSERT_EQ(MissionControl::decision_maker,
+                  mission_control_node->get_mission_state());
+        ASSERT_TRUE(control_true_flag);
+        ASSERT_TRUE(control_false_flag);
+    }
+
+    // Mission Abort because command has the wrong type
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        ASSERT_NO_THROW(mission_control_node->mode_prepare_mission());
+        ASSERT_NO_THROW(mission_control_node->mode_decision_maker());
+
+        mission_control_node->commands[mission_control_node->current_command_id]
+            .type = "abc";
+
+        ASSERT_DEATH({ mission_control_node->mode_fly_to_waypoint(); }, ".*");
+    }
+
+    // Mission Abort because of a timeout
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        ASSERT_NO_THROW(mission_control_node->mode_prepare_mission());
+        ASSERT_NO_THROW(mission_control_node->mode_decision_maker());
+
+        ASSERT_NO_THROW(mission_control_node->mode_fly_to_waypoint());
+
+        // Simulate that wait time is over
+        mission_control_node->wait_time_finished_ok = true;
+
+        ASSERT_DEATH({ mission_control_node->mode_fly_to_waypoint(); }, ".*");
     }
 }

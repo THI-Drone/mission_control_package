@@ -246,11 +246,12 @@ void MissionControl::mode_fly_to_waypoint() {
                      commands.at(current_command_id).data.dump().c_str());
 
         // Check that current command is of the correct type
-        if (commands.at(current_command_id).type != "waypoint")
+        if (commands.at(current_command_id).type != "waypoint") {
             mission_abort("MissionControl::" + (std::string) __func__ +
                           ": command has the wrong "
                           "type: Expected: 'waypoint', Got: '" +
                           commands.at(current_command_id).type + "'");
+        }
 
         // Activate Waypoint Node and send the command data as payload
         send_control_json(common_lib::node_names::WAYPOINT, true,
