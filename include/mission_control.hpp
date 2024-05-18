@@ -45,6 +45,8 @@ class MissionControl : public common_lib::CommonNode {
    public:
     /**
      * @brief Enumeration representing the different states of a mission.
+     *
+     * @note Consult the documentation for details.
      */
     typedef enum MissionState {
         prepare_mission,
@@ -115,14 +117,15 @@ class MissionControl : public common_lib::CommonNode {
         "";  //!< node_id that is still allowed to send data to the FCC
              //!< interface during `probation_period`, set to "" if none is
              //!< allowed
-    rclcpp::TimerBase::SharedPtr probation_period_timer;
+    rclcpp::TimerBase::SharedPtr
+        probation_period_timer;  //!< Timer for the probation period
 
     // Wait Time
     static constexpr uint16_t wait_time_between_msgs_ms =
         50;  //!< Wait time between messages in ms to avoid confusion
     bool wait_time_finished_ok =
         false;  //!< True if wait time finished, otherwise false
-    rclcpp::TimerBase::SharedPtr wait_time_timer;
+    rclcpp::TimerBase::SharedPtr wait_time_timer;  //!< Timer for the wait time
 
     // Mission Definition File
     std::string mdf_file_path =
@@ -148,34 +151,39 @@ class MissionControl : public common_lib::CommonNode {
 
     // Job finished
     rclcpp::Subscription<interfaces::msg::JobFinished>::SharedPtr
-        job_finished_subscription;
+        job_finished_subscription;  //!< Subscription on the `JobFinished` topic
 
     // Waypoint Publisher
     rclcpp::Publisher<interfaces::msg::UAVWaypointCommand>::SharedPtr
-        uav_waypoint_command_publisher;
+        uav_waypoint_command_publisher;  //!< Publisher on the
+                                         //!< `UAVWaypointCommand` topic
     rclcpp::Publisher<interfaces::msg::UAVCommand>::SharedPtr
-        uav_command_publisher;
+        uav_command_publisher;  //!< Publisher on the `UAVCommand` topic
 
     // Safety Publisher
     rclcpp::Publisher<interfaces::msg::SafetyLimits>::SharedPtr
-        safety_limits_publisher;
+        safety_limits_publisher;  //!< Publisher on the `SafetyLimits` topic
 
     // Control
-    rclcpp::Publisher<interfaces::msg::Control>::SharedPtr control_publisher;
+    rclcpp::Publisher<interfaces::msg::Control>::SharedPtr
+        control_publisher;  //!< Publisher on the `Control` topic
 
     // Mission Start
     rclcpp::Subscription<interfaces::msg::MissionStart>::SharedPtr
-        mission_start_subscription;
+        mission_start_subscription;  //!< Subscription on the `MissionStart`
+                                     //!< topic
 
     // Mission Finished
     rclcpp::Publisher<interfaces::msg::MissionFinished>::SharedPtr
-        mission_finished_publisher;
+        mission_finished_publisher;  //!< Publisher ont he `MissionFinished`
+                                     //!< topic
 
     // Fail-Safe Checks
     rclcpp::Subscription<interfaces::msg::UAVWaypointCommand>::SharedPtr
-        waypoint_command_subscription;
+        waypoint_command_subscription;  //!< Subscription on the
+                                        //!< `UAVWaypointCommand` topic
     rclcpp::Subscription<interfaces::msg::UAVCommand>::SharedPtr
-        command_subscription;
+        command_subscription;  //!< Subscription on the `UAVCommand` topic
 
     // Heartbeat
     static constexpr uint16_t heartbeat_period_ms =
@@ -187,9 +195,10 @@ class MissionControl : public common_lib::CommonNode {
         false;  //!< true if all heartbeats we're received in the last
                 //!< timeframe and the nodes are in there correct states,
                 //!< otherwise false
-    rclcpp::TimerBase::SharedPtr heartbeat_timer;
+    rclcpp::TimerBase::SharedPtr
+        heartbeat_timer;  //!< Timer to check the latest heartbeats
     rclcpp::Subscription<interfaces::msg::Heartbeat>::SharedPtr
-        heartbeat_subscription;
+        heartbeat_subscription;  //!< Subsription on the `Heartbeat` topic
 
     // FCC Bridge callbacks
     static constexpr uint16_t max_position_msg_time_difference_ms =
@@ -209,13 +218,14 @@ class MissionControl : public common_lib::CommonNode {
 
     // FCC Bridge callbacks
     rclcpp::Subscription<interfaces::msg::GPSPosition>::SharedPtr
-        position_subscription;
+        position_subscription;  //!< Subscription on the `GPSPosition` topic
     rclcpp::Subscription<interfaces::msg::MissionProgress>::SharedPtr
-        mission_progress_subscription;
+        mission_progress_subscription;  //!< Subscription on the
+                                        //!< `MissionProgress` topic
     rclcpp::Subscription<interfaces::msg::FlightState>::SharedPtr
-        flight_state_subscription;
+        flight_state_subscription;  //!< Subscription on the `FlightState` topic
     rclcpp::Subscription<interfaces::msg::UAVHealth>::SharedPtr
-        health_subscription;
+        health_subscription;  //!< Subscription on the `UAVHealth` topic
 
    public:
     MissionControl(const rclcpp::NodeOptions &options);
@@ -226,7 +236,9 @@ class MissionControl : public common_lib::CommonNode {
     // Configuration Changes
     void set_standby_config();
     void set_mission_state(const MissionState_t new_mission_state);
-    constexpr MissionState_t get_mission_state() const { return mission_state; }
+    constexpr MissionState_t get_mission_state() const {
+        return mission_state;
+    }  //!< Returns the current mission state
     const char *get_mission_state_str() const;
     const char *get_mission_state_str(MissionState_t mission_state) const;
     bool get_state_first_loop();
@@ -245,17 +257,25 @@ class MissionControl : public common_lib::CommonNode {
     // Active Node
     void set_active_node_id(std::string node_id);
     void clear_active_node_id();
-    std::string get_active_node_id() const { return active_node_id; }
+    std::string get_active_node_id() const {
+        return active_node_id;
+    }  //!< Returns the active node id
 
     // Probation Period
-    std::string get_last_active_node_id() const { return last_active_node_id; }
-    constexpr bool get_probation_period() const { return probation_period; }
+    std::string get_last_active_node_id() const {
+        return last_active_node_id;
+    }  //!< Returns the last active node id
+    constexpr bool get_probation_period() const {
+        return probation_period;
+    }  //!< Returns the probation period
     void start_probation_period();
     void probation_period_timer_callback();
 
     // Active Marker
     void set_active_marker_name(const std::string &new_active_marker_name);
-    std::string get_active_marker_name() const { return active_marker_name; }
+    std::string get_active_marker_name() const {
+        return active_marker_name;
+    }  //!< Returns the active marker name
 
     // Modes - only virtual for tests to override this functionality
     virtual void mode_prepare_mission();
