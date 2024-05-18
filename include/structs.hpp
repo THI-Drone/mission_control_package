@@ -8,9 +8,9 @@
  * @brief Struct representing a heartbeat payload.
  */
 struct heartbeat_payload {
-    bool received; /**< Flag indicating if the payload has been received. */
-    uint32_t tick; /**< The tick value of the payload. */
-    bool active;   /**< The active state of the payload. */
+    bool received;  //!< Flag indicating if the payload has been received.
+    uint32_t tick;  //!< The tick value of the payload.
+    bool active;    //!< The active state of the payload.
 
     /**
      * @brief Default constructor for heartbeat_payload.
@@ -32,12 +32,15 @@ struct heartbeat_payload {
  * @note Only set the `is_fcc_bridge` flag for the actual fcc bridge
  */
 struct ros_node {
-    struct heartbeat_payload hb_payload;
-    bool can_start_mission = false;
-    bool is_fcc_bridge = false;
+    struct heartbeat_payload hb_payload;  //!< Last heartbeat payload
+    bool can_start_mission =
+        false;  //!< Flag that indicates if this node is allowed to start the
+                //!< mission (= send a MissionStart message)
+    bool is_fcc_bridge = false;  //!< Flag that indicates if node is the FCC
+                                 //!< Bridge, as it is a special case
 
     /**
-     * @brief Default constructor for the ros_node class.
+     * @brief Default constructor
      */
     ros_node() = default;
 
@@ -55,14 +58,55 @@ struct ros_node {
 
 /**
  * @brief Represents a position with latitude, longitude, and height.
+ *
+ * @warning Set `values_set` to true if values are set
  */
 struct Position {
     bool values_set =
         false;  //!< Flag that is true when the values have been set and false
                 //!< when not initialized with values
-    double coordinate_lat = 0.0;
-    double coordinate_lon = 0.0;
-    uint32_t height_cm = 0u;
+    double coordinate_lat = 0.0;  //!< Latitude
+    double coordinate_lon = 0.0;  //!< Longitude
+    uint32_t height_cm = 0u;      //!< Height in cm
+
+    /**
+     * @brief Default constructor
+     */
+    Position() = default;
+
+    /**
+     * @brief Constructs a Position object with the given latitude, longitude,
+     * and height.
+     *
+     * @note Sets `values_set` flag to true
+     *
+     * @param coordinate_lat The latitude coordinate of the position.
+     * @param coordinate_lon The longitude coordinate of the position.
+     * @param height_cm The height in centimeters of the position.
+     */
+    Position(double coordinate_lat, double coordinate_lon, uint32_t height_cm) {
+        set_position(coordinate_lat, coordinate_lon, height_cm);
+    }
+
+    /**
+     * @brief Sets the position coordinates and height.
+     *
+     * This function sets the latitude, longitude, and height of the position.
+     *
+     * @note Sets `values_set` flag to true
+     *
+     * @param coordinate_lat The latitude coordinate in degrees.
+     * @param coordinate_lon The longitude coordinate in degrees.
+     * @param height_cm The height in centimeters.
+     */
+    void set_position(double coordinate_lat, double coordinate_lon,
+                      uint32_t height_cm) {
+        this->coordinate_lat = coordinate_lat;
+        this->coordinate_lon = coordinate_lon;
+        this->height_cm = height_cm;
+
+        this->values_set = true;
+    }
 
     /**
      * @brief Get the position as an array of doubles.

@@ -522,10 +522,8 @@ void MissionControl::position_callback(
     }
 
     // Store values
-    current_position.values_set = true;
-    current_position.coordinate_lat = msg.latitude_deg;
-    current_position.coordinate_lon = msg.longitude_deg;
-    current_position.height_cm = msg.relative_altitude_m * 100.0;
+    current_position.set_position(msg.latitude_deg, msg.longitude_deg,
+                                  msg.relative_altitude_m * 100.0);
 }
 
 /**
