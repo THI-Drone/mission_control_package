@@ -14,6 +14,7 @@
 #include "rclcpp/logging.hpp"
 #include "rclcpp/node.hpp"
 #include "rclcpp/node_options.hpp"
+#include "structs.hpp"
 
 // Message includes
 #include "interfaces/msg/flight_mode.hpp"
@@ -219,6 +220,154 @@ TEST(mission_control_package, mode_self_check_test) {
         }
 
         ASSERT_DEATH({ mission_control.mode_self_check(); }, ".*");
+    }
+}
+
+/**
+ * @brief Test case for the `mission_control_package`
+ * mode_check_drone_configuration function.
+ *
+ * This test case verifies the behavior of the mode_check_drone_configuration
+ * function in different scenarios. It checks if the function throws any
+ * exceptions and if the mission state is correctly updated.
+ *
+ * Test Cases:
+ * - Fully working check drone configuration procedure.
+ * - Mission Abort because position is outside of geofence.
+ * - Mission Abort because position is not set.
+ * - Mission Abort because of a timeout.
+ */
+TEST(mission_control_package, mode_check_drone_configuration_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    const uint32_t max_wait_time =
+        (60 /* [s] */ * 1000) / MissionControl::event_loop_time_delta_ms;
+
+    // Test fully working check drone configuartion procedure
+    {
+        MissionControl mission_control(default_options);
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_check_drone_configuration());
+        }
+
+        mission_control.mode_prepare_mission();
+
+        // Set position based on first waypoint
+        {
+            mission_file_lib::command cmd =
+                mission_control.mission_definition_reader
+                    .get_marker_commands("init")
+                    .at(0);
+
+            mission_control.current_position.set_position(
+                cmd.data["target_coordinate_lat"],
+                cmd.data["target_coordinate_lon"],
+                cmd.data["target_height_cm"]);
+        }
+
+        mission_control.drone_health_ok = false;
+        mission_control.current_landed_state =
+            interfaces::msg::LandedState::UNKNOWN;
+        mission_control.current_flight_mode =
+            interfaces::msg::FlightMode::UNKNOWN;
+
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_check_drone_configuration());
+        }
+
+        mission_control.drone_health_ok = true;
+        mission_control.current_landed_state =
+            interfaces::msg::LandedState::UNKNOWN;
+        mission_control.current_flight_mode =
+            interfaces::msg::FlightMode::UNKNOWN;
+
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_check_drone_configuration());
+        }
+
+        mission_control.drone_health_ok = false;
+        mission_control.current_landed_state =
+            interfaces::msg::LandedState::ON_GROUND;
+        mission_control.current_flight_mode =
+            interfaces::msg::FlightMode::UNKNOWN;
+
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_check_drone_configuration());
+        }
+
+        mission_control.drone_health_ok = false;
+        mission_control.current_landed_state =
+            interfaces::msg::LandedState::UNKNOWN;
+        mission_control.current_flight_mode = interfaces::msg::FlightMode::HOLD;
+
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_check_drone_configuration());
+        }
+
+        mission_control.drone_health_ok = true;
+        mission_control.current_landed_state =
+            interfaces::msg::LandedState::ON_GROUND;
+        mission_control.current_flight_mode = interfaces::msg::FlightMode::HOLD;
+
+        ASSERT_NO_THROW(mission_control.mode_check_drone_configuration());
+        ASSERT_EQ(MissionControl::armed, mission_control.get_mission_state());
+    }
+
+    // Mission Abort because position is outside of geofence
+    {
+        MissionControl mission_control(default_options);
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_check_drone_configuration());
+        }
+
+        mission_control.mode_prepare_mission();
+
+        // Set position to something completely off
+        mission_control.current_position.set_position(0.123, 0.123, 1000 * 100);
+
+        mission_control.drone_health_ok = true;
+        mission_control.current_landed_state =
+            interfaces::msg::LandedState::ON_GROUND;
+        mission_control.current_flight_mode = interfaces::msg::FlightMode::HOLD;
+
+        ASSERT_DEATH({ mission_control.mode_check_drone_configuration(); },
+                     ".*");
+    }
+
+    // Mission Abort because position is not set
+    {
+        MissionControl mission_control(default_options);
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_check_drone_configuration());
+        }
+
+        mission_control.mode_prepare_mission();
+
+        // 'Unset' position
+        mission_control.current_position.values_set = false;
+
+        mission_control.drone_health_ok = true;
+        mission_control.current_landed_state =
+            interfaces::msg::LandedState::ON_GROUND;
+        mission_control.current_flight_mode = interfaces::msg::FlightMode::HOLD;
+
+        ASSERT_DEATH({ mission_control.mode_check_drone_configuration(); },
+                     ".*");
+    }
+
+    // Mission Abort because of a timeout
+    {
+        MissionControl mission_control(default_options);
+        for (size_t i = 0; i < max_wait_time - 1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_check_drone_configuration());
+        }
+
+        ASSERT_DEATH({ mission_control.mode_check_drone_configuration(); },
+                     ".*");
     }
 }
 
