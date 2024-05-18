@@ -60,9 +60,9 @@ struct Position {
     bool values_set =
         false;  //!< Flag that is true when the values have been set and false
                 //!< when not initialized with values
-    double coordinate_lat;
-    double coordinate_lon;
-    uint32_t height_cm;
+    double coordinate_lat = 0.0;
+    double coordinate_lon = 0.0;
+    uint32_t height_cm = 0u;
 
     /**
      * @brief Get the position as an array of doubles.
