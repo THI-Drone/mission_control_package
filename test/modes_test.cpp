@@ -45,6 +45,14 @@ TEST(mission_control_package, mode_prepare_mission_test) {
               mission_control.get_mission_state());
 }
 
+/**
+ * @brief Test case for the `mission_control_package` module's
+ * `initiate_takeoff_test` function.
+ *
+ * This test case verifies the behavior of the `initiate_takeoff_test` function
+ * in the `mission_control_package` module. It tests the takeoff procedure by
+ * simulating various scenarios and checking the expected outcomes.
+ */
 TEST(mission_control_package, initiate_takeoff_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
@@ -318,6 +326,14 @@ TEST(mission_control_package, initiate_takeoff_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package mode_decision_maker_test.
+ *
+ * This test case verifies the behavior of the mode_decision_maker function in
+ * the mission_control_package. It tests the mode_decision_maker function with
+ * different scenarios, including active marker 'init', marker change, and empty
+ * command list.
+ */
 TEST(mission_control_package, mode_decision_maker_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
@@ -447,6 +463,15 @@ TEST(mission_control_package, mode_decision_maker_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case verifies the behavior of the `mode_fly_to_waypoint_test`
+ * function in the `mission_control_package`. It tests the fly to waypoint
+ * procedure by simulating different scenarios such as a fully working
+ * procedure, a mission abort due to a command with the wrong type, and a
+ * mission abort due to a timeout.
+ */
 TEST(mission_control_package, mode_fly_to_waypoint_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
@@ -589,6 +614,15 @@ TEST(mission_control_package, mode_fly_to_waypoint_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package mode_detect_marker_test.
+ *
+ * This test case verifies the behavior of the mode_detect_marker function in
+ * the mission_control_package. It tests the following scenarios:
+ * 1. Fully working detect marker procedure.
+ * 2. Mission abort because the command has the wrong type.
+ * 3. Mission abort because of a timeout.
+ */
 TEST(mission_control_package, mode_detect_marker_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
