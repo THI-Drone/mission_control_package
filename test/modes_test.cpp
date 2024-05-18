@@ -47,6 +47,14 @@ TEST(mission_control_package, mode_prepare_mission_test) {
               mission_control.get_mission_state());
 }
 
+/**
+ * @brief Test case for the `mission_control_package` mode_self_check_test.
+ *
+ * This test case verifies the behavior of the `mode_self_check` function in the
+ * `mission_control_package`. It tests the self check procedure under different
+ * conditions, checks the correctness of safety settings, and verifies the
+ * mission abort behavior due to a timeout.
+ */
 TEST(mission_control_package, mode_self_check_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
