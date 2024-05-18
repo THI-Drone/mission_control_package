@@ -27,6 +27,224 @@ void MissionControl::mode_prepare_mission() {
 }
 
 /**
+ * @brief Executes the self-check of the mission control.
+ *
+ * This function performs a self-check by waiting for a good drone health and
+ * checking if all heartbeats are received within a given timeframe (30s). If
+ * the self-check fails, the mission is aborted.
+ *
+ * @note Aborts after 30s if not all conditions were met
+ */
+void MissionControl::mode_self_check() {
+    static uint32_t i;
+
+    if (get_state_first_loop()) {
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Self check started", __func__);
+        set_standby_config();
+        i = 0;
+    }
+
+    const uint32_t max_wait_time =
+        (30 /* [s] */ * 1000) / event_loop_time_delta_ms;
+
+    if (i % (1000 / event_loop_time_delta_ms) == 0) {
+        // Creating helpful log message
+        std::vector<std::string> missing_conditions = {};
+        if (!heartbeat_received_all) missing_conditions.push_back("heartbeats");
+        if (!drone_health_ok) missing_conditions.push_back("drone health");
+
+        std::string missing_conditions_str = "";
+        {
+            size_t i = 0;
+
+            for (const auto &mc : missing_conditions) {
+                if (i > 0) missing_conditions_str += ", ";
+                missing_conditions_str += mc;
+                i++;
+            }
+        }
+
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Waiting for: [%s]: "
+                    "%us / %us",
+                    __func__, missing_conditions_str.c_str(),
+                    (i * event_loop_time_delta_ms) / 1000,
+                    (max_wait_time * event_loop_time_delta_ms) / 1000);
+    }
+
+    i++;
+
+    if (i >= max_wait_time) {
+        RCLCPP_FATAL(this->get_logger(),
+                     "MissionControl::%s: Self check failed: Not all "
+                     "conditions met in the given timeframe (%us)",
+                     __func__,
+                     (max_wait_time * event_loop_time_delta_ms) / 1000);
+        mission_abort(
+            "MissionControl::" + (std::string) __func__ +
+            ": Self check failed: Not all conditions met in the given "
+            "timeframe");
+    }
+
+    // Check that all heartbeats were received and drone health is good
+    if (heartbeat_received_all && drone_health_ok) {
+        {
+            // Send safety settings to FCC bridge
+            mission_file_lib::safety safety_settings =
+                mission_definition_reader.get_safety_settings();
+
+            interfaces::msg::SafetyLimits msg;
+            msg.time_stamp = this->now();
+            msg.sender_id = this->get_name();
+            msg.max_speed_m_s =
+                std::max(safety_settings.max_horizontal_speed_mps,
+                         safety_settings.max_vertical_speed_mps);
+            msg.max_height_m = safety_settings.max_height_cm / 100.0;
+            msg.min_soc = safety_settings.min_soc_percent;
+
+            std::vector<interfaces::msg::Waypoint> geofence_points;
+
+            for (const auto &p : safety_settings.get_geofence_points()) {
+                interfaces::msg::Waypoint geofence_point;
+                geofence_point.latitude_deg = p.at(0);
+                geofence_point.longitude_deg = p.at(1);
+                geofence_point.relative_altitude_m =
+                    interfaces::msg::Waypoint::INVALID_ALTITUDE;
+
+                geofence_points.push_back(geofence_point);
+            }
+
+            msg.geofence_points = geofence_points;
+
+            safety_limits_publisher->publish(msg);
+
+            RCLCPP_INFO(this->get_logger(),
+                        "MissionControl::%s: Sent safety limits to FCC bridge",
+                        __func__);
+        }
+
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Self check finished", __func__);
+        set_mission_state(check_drone_configuration);
+    }
+}
+
+/**
+ * @brief Checks the drone configuration and sets the mission state to armed.
+ *
+ * This function checks if the drone configuration is valid by performing the
+ * following checks:
+ * 1. Check if position is inside of geofence.
+ * 2. Check that drone is on the ground.
+ * 3. Check that the drone health is good.
+ * 4. Check that the current flight mode is `HOLD`.
+ *
+ * @note Aborts after 60s if not all conditions were met. After performing the
+ * checks, the mission state is set to `armed`.
+ */
+void MissionControl::mode_check_drone_configuration() {
+    static uint32_t i;
+
+    if (get_state_first_loop()) {
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Check "
+                    "drone configuration started",
+                    __func__);
+        set_standby_config();
+        i = 0;
+    }
+
+    const uint32_t max_wait_time =
+        (60 /* [s] */ * 1000) / event_loop_time_delta_ms;
+
+    if (i % (1000 / event_loop_time_delta_ms) == 0) {
+        // Creating helpful log message
+        std::vector<std::string> missing_conditions = {};
+        if (!drone_health_ok) missing_conditions.push_back("drone health");
+        if (current_landed_state != interfaces::msg::LandedState::ON_GROUND)
+            missing_conditions.push_back("landed state 'ON_GROUND'");
+        if (current_flight_mode != interfaces::msg::FlightMode::HOLD)
+            missing_conditions.push_back("flight mode 'HOLD'");
+
+        std::string missing_conditions_str = "";
+        {
+            size_t i = 0;
+
+            for (const auto &mc : missing_conditions) {
+                if (i > 0) missing_conditions_str += ", ";
+                missing_conditions_str += mc;
+                i++;
+            }
+        }
+
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Waiting for: [%s]: "
+                    "%us / %us",
+                    __func__, missing_conditions_str.c_str(),
+                    (i * event_loop_time_delta_ms) / 1000,
+                    (max_wait_time * event_loop_time_delta_ms) / 1000);
+    }
+
+    i++;
+
+    if (i >= max_wait_time) {
+        RCLCPP_FATAL(
+            this->get_logger(),
+            "MissionControl::%s: Check drone configuration failed: Not all "
+            "conditions met in the given timeframe (%us)",
+            __func__, (max_wait_time * event_loop_time_delta_ms) / 1000);
+        mission_abort("MissionControl::" + (std::string) __func__ +
+                      ": Check drone configuration failed: Not all conditions "
+                      "met in the given "
+                      "timeframe");
+    }
+
+    // Check that drone health is good, FCC is in 'HOLD' state, and drone is on
+    // the ground
+    if (drone_health_ok &&
+        current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
+        current_flight_mode == interfaces::msg::FlightMode::HOLD) {
+        // Check that current position is in geofence
+        try {
+            if (!mission_definition_reader.check_in_geofence(
+                    current_position.get_position_array())) {
+                RCLCPP_FATAL(this->get_logger(),
+                             "MissionControl::%s: "
+                             "Drone is outside of geofence. Can't arm.",
+                             __func__);
+
+                mission_abort("MissionControl::" + (std::string) __func__ +
+                              ": Drone is "
+                              "outside of geofence. Can't arm.");
+            }
+        } catch (const std::runtime_error &e) {
+            RCLCPP_FATAL(this->get_logger(),
+                         "MissionControl::%s: "
+                         "Position could not be verified to be inside of the "
+                         "geofence: %s",
+                         __func__, e.what());
+
+            mission_abort((std::string) "MissionControl::" + __func__ +
+                          ": Position could not be verified to be inside of "
+                          "the geofence: " +
+                          e.what());
+        }
+
+        // All checks finished, go to 'armed' state
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Check drone "
+                    "configuration finished",
+                    __func__);
+        set_mission_state(armed);
+        RCLCPP_INFO(this->get_logger(),
+                    "MissionControl::%s: Mission "
+                    "Control armed",
+                    __func__);
+    }
+}
+
+/**
  * @brief Initiates the takeoff procedure.
  *
  * This function is responsible for initiating the takeoff procedure of the
@@ -385,223 +603,5 @@ void MissionControl::mode_detect_marker() {
                     "successfully. Set mission state to '%s'.",
                     __func__, get_mission_state_str(decision_maker));
         set_mission_state(decision_maker);
-    }
-}
-
-/**
- * @brief Executes the self-check of the mission control.
- *
- * This function performs a self-check by waiting for a good drone health and
- * checking if all heartbeats are received within a given timeframe (30s). If
- * the self-check fails, the mission is aborted.
- *
- * @note Aborts after 30s if not all conditions were met
- */
-void MissionControl::mode_self_check() {
-    static uint32_t i;
-
-    if (get_state_first_loop()) {
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Self check started", __func__);
-        set_standby_config();
-        i = 0;
-    }
-
-    const uint32_t max_wait_time =
-        (30 /* [s] */ * 1000) / event_loop_time_delta_ms;
-
-    if (i % (1000 / event_loop_time_delta_ms) == 0) {
-        // Creating helpful log message
-        std::vector<std::string> missing_conditions = {};
-        if (!heartbeat_received_all) missing_conditions.push_back("heartbeats");
-        if (!drone_health_ok) missing_conditions.push_back("drone health");
-
-        std::string missing_conditions_str = "";
-        {
-            size_t i = 0;
-
-            for (const auto &mc : missing_conditions) {
-                if (i > 0) missing_conditions_str += ", ";
-                missing_conditions_str += mc;
-                i++;
-            }
-        }
-
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Waiting for: [%s]: "
-                    "%us / %us",
-                    __func__, missing_conditions_str.c_str(),
-                    (i * event_loop_time_delta_ms) / 1000,
-                    (max_wait_time * event_loop_time_delta_ms) / 1000);
-    }
-
-    i++;
-
-    if (i >= max_wait_time) {
-        RCLCPP_FATAL(this->get_logger(),
-                     "MissionControl::%s: Self check failed: Not all "
-                     "conditions met in the given timeframe (%us)",
-                     __func__,
-                     (max_wait_time * event_loop_time_delta_ms) / 1000);
-        mission_abort(
-            "MissionControl::" + (std::string) __func__ +
-            ": Self check failed: Not all conditions met in the given "
-            "timeframe");
-    }
-
-    // Check that all heartbeats were received and drone health is good
-    if (heartbeat_received_all && drone_health_ok) {
-        {
-            // Send safety settings to FCC bridge
-            mission_file_lib::safety safety_settings =
-                mission_definition_reader.get_safety_settings();
-
-            interfaces::msg::SafetyLimits msg;
-            msg.time_stamp = this->now();
-            msg.sender_id = this->get_name();
-            msg.max_speed_m_s =
-                std::max(safety_settings.max_horizontal_speed_mps,
-                         safety_settings.max_vertical_speed_mps);
-            msg.max_height_m = safety_settings.max_height_cm / 100.0;
-            msg.min_soc = safety_settings.min_soc_percent;
-
-            std::vector<interfaces::msg::Waypoint> geofence_points;
-
-            for (const auto &p : safety_settings.get_geofence_points()) {
-                interfaces::msg::Waypoint geofence_point;
-                geofence_point.latitude_deg = p.at(0);
-                geofence_point.longitude_deg = p.at(1);
-                geofence_point.relative_altitude_m =
-                    interfaces::msg::Waypoint::INVALID_ALTITUDE;
-
-                geofence_points.push_back(geofence_point);
-            }
-
-            msg.geofence_points = geofence_points;
-
-            safety_limits_publisher->publish(msg);
-
-            RCLCPP_INFO(this->get_logger(),
-                        "MissionControl::%s: Sent safety limits to FCC bridge",
-                        __func__);
-        }
-
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Self check finished", __func__);
-        set_mission_state(check_drone_configuration);
-    }
-}
-
-/**
- * @brief Checks the drone configuration and sets the mission state to armed.
- *
- * This function checks if the drone configuration is valid by performing the
- * following checks:
- * 1. Check if position is inside of geofence.
- * 2. Check that drone is on the ground.
- * 3. Check that the drone health is good.
- * 4. Check that the current flight mode is `HOLD`.
- *
- * @note Aborts after 60s if not all conditions were met. After performing the
- * checks, the mission state is set to `armed`.
- */
-void MissionControl::mode_check_drone_configuration() {
-    static uint32_t i;
-
-    if (get_state_first_loop()) {
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Check "
-                    "drone configuration started",
-                    __func__);
-        set_standby_config();
-        i = 0;
-    }
-
-    const uint32_t max_wait_time =
-        (60 /* [s] */ * 1000) / event_loop_time_delta_ms;
-
-    if (i % (1000 / event_loop_time_delta_ms) == 0) {
-        // Creating helpful log message
-        std::vector<std::string> missing_conditions = {};
-        if (!drone_health_ok) missing_conditions.push_back("drone health");
-        if (current_landed_state != interfaces::msg::LandedState::ON_GROUND)
-            missing_conditions.push_back("landed state 'ON_GROUND'");
-        if (current_flight_mode != interfaces::msg::FlightMode::HOLD)
-            missing_conditions.push_back("flight mode 'HOLD'");
-
-        std::string missing_conditions_str = "";
-        {
-            size_t i = 0;
-
-            for (const auto &mc : missing_conditions) {
-                if (i > 0) missing_conditions_str += ", ";
-                missing_conditions_str += mc;
-                i++;
-            }
-        }
-
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Waiting for: [%s]: "
-                    "%us / %us",
-                    __func__, missing_conditions_str.c_str(),
-                    (i * event_loop_time_delta_ms) / 1000,
-                    (max_wait_time * event_loop_time_delta_ms) / 1000);
-    }
-
-    i++;
-
-    if (i >= max_wait_time) {
-        RCLCPP_FATAL(
-            this->get_logger(),
-            "MissionControl::%s: Check drone configuration failed: Not all "
-            "conditions met in the given timeframe (%us)",
-            __func__, (max_wait_time * event_loop_time_delta_ms) / 1000);
-        mission_abort("MissionControl::" + (std::string) __func__ +
-                      ": Check drone configuration failed: Not all conditions "
-                      "met in the given "
-                      "timeframe");
-    }
-
-    // Check that drone health is good, FCC is in 'HOLD' state, and drone is on
-    // the ground
-    if (drone_health_ok &&
-        current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
-        current_flight_mode == interfaces::msg::FlightMode::HOLD) {
-        // Check that current position is in geofence
-        try {
-            if (!mission_definition_reader.check_in_geofence(
-                    current_position.get_position_array())) {
-                RCLCPP_FATAL(this->get_logger(),
-                             "MissionControl::%s: "
-                             "Drone is outside of geofence. Can't arm.",
-                             __func__);
-
-                mission_abort("MissionControl::" + (std::string) __func__ +
-                              ": Drone is "
-                              "outside of geofence. Can't arm.");
-            }
-        } catch (const std::runtime_error &e) {
-            RCLCPP_FATAL(this->get_logger(),
-                         "MissionControl::%s: "
-                         "Position could not be verified to be inside of the "
-                         "geofence: %s",
-                         __func__, e.what());
-
-            mission_abort((std::string) "MissionControl::" + __func__ +
-                          ": Position could not be verified to be inside of "
-                          "the geofence: " +
-                          e.what());
-        }
-
-        // All checks finished, go to 'armed' state
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Check drone "
-                    "configuration finished",
-                    __func__);
-        set_mission_state(armed);
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Mission "
-                    "Control armed",
-                    __func__);
     }
 }
