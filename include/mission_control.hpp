@@ -140,7 +140,7 @@ class MissionControl : public common_lib::CommonNode {
         0.0;  //!< Current mission progress as received by FCC Bridge
 
     // Event Loop
-    const uint32_t event_loop_time_delta_ms =
+    static constexpr uint32_t event_loop_time_delta_ms =
         100;  //!< Interval in which the Event Loop is triggered
     bool event_loop_active =
         true;  //!< If set to true, the event loop will be executed periodically

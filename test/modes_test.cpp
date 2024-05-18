@@ -9,6 +9,7 @@
 #include "common_package/node_names.hpp"
 #include "common_package/topic_names.hpp"
 #include "mission_control.hpp"
+#include "mission_definition_file.hpp"
 #include "rclcpp/executors.hpp"
 #include "rclcpp/logging.hpp"
 #include "rclcpp/node.hpp"
@@ -17,6 +18,7 @@
 // Message includes
 #include "interfaces/msg/flight_mode.hpp"
 #include "interfaces/msg/landed_state.hpp"
+#include "interfaces/msg/safety_limits.hpp"
 #include "interfaces/msg/uav_command.hpp"
 #include "interfaces/msg/waypoint.hpp"
 
@@ -43,6 +45,173 @@ TEST(mission_control_package, mode_prepare_mission_test) {
     ASSERT_EQ("", mission_control.get_active_node_id());
     ASSERT_EQ(MissionControl::MissionState_t::selfcheck,
               mission_control.get_mission_state());
+}
+
+TEST(mission_control_package, mode_self_check_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    const uint32_t max_wait_time =
+        (30 /* [s] */ * 1000) / MissionControl::event_loop_time_delta_ms;
+
+    // Test fully working self check procedure
+    {
+        MissionControl mission_control(default_options);
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_self_check());
+        }
+
+        mission_control.heartbeat_received_all = true;
+        mission_control.drone_health_ok = false;
+
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_self_check());
+        }
+
+        mission_control.heartbeat_received_all = false;
+        mission_control.drone_health_ok = true;
+
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_self_check());
+        }
+
+        mission_control.heartbeat_received_all = false;
+        mission_control.drone_health_ok = false;
+
+        for (size_t i = 0; i < max_wait_time * 0.1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_self_check());
+        }
+
+        mission_control.heartbeat_received_all = true;
+        mission_control.drone_health_ok = true;
+
+        ASSERT_NO_THROW(mission_control.mode_self_check());
+        ASSERT_EQ(MissionControl::check_drone_configuration,
+                  mission_control.get_mission_state());
+    }
+
+    // Check that safety settings are sent correctly
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        // To make sure that the safety settings message is only received
+        // exactly once
+        bool safety_settings_received_flag = false;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Manually set variable
+        mission_control_node->drone_health_ok = true;
+
+        // Create demo nodes
+        class OpenCommonNode : public common_lib::CommonNode {
+           public:
+            OpenCommonNode(const std::string &id) : CommonNode(id) {}
+
+            void activate_wrapper() { this->activate(); }
+        };
+
+        std::shared_ptr<common_lib::CommonNode> qr_code_scanner_node =
+            std::make_shared<common_lib::CommonNode>(
+                common_lib::node_names::QRCODE_SCANNER);
+
+        std::shared_ptr<OpenCommonNode> fcc_bridge =
+            std::make_shared<OpenCommonNode>(
+                common_lib::node_names::FCC_BRIDGE);
+        fcc_bridge->activate_wrapper();
+
+        std::shared_ptr<common_lib::CommonNode> waypoint_node =
+            std::make_shared<common_lib::CommonNode>(
+                common_lib::node_names::WAYPOINT);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        // Subscribe test node to SafetyLimits topic
+        rclcpp::Subscription<
+            interfaces::msg::SafetyLimits>::SharedPtr safety_limits_sub =
+            test_node->create_subscription<interfaces::msg::SafetyLimits>(
+                common_lib::topic_names::SafetyLimits, 10,
+                [test_node, &safety_settings_received_flag,
+                 mission_control_node,
+                 &executor](interfaces::msg::SafetyLimits::ConstSharedPtr msg) {
+                    RCLCPP_DEBUG(test_node->get_logger(),
+                                 "Received safety limits message");
+
+                    ASSERT_FALSE(safety_settings_received_flag);
+                    safety_settings_received_flag = true;
+
+                    ASSERT_STREQ(mission_control_node->get_name(),
+                                 msg->sender_id.c_str());
+
+                    mission_file_lib::safety safety_settings =
+                        mission_control_node->mission_definition_reader
+                            .get_safety_settings();
+
+                    {
+                        const float max_speed_m_s =
+                            std::max(safety_settings.max_horizontal_speed_mps,
+                                     safety_settings.max_vertical_speed_mps);
+                        ASSERT_EQ(max_speed_m_s, msg->max_speed_m_s);
+                    }
+
+                    {
+                        const float max_height_m =
+                            safety_settings.max_height_cm / 100.0;
+                        ASSERT_EQ(max_height_m, msg->max_height_m);
+                    }
+
+                    {
+                        const float min_soc = safety_settings.min_soc_percent;
+                        ASSERT_EQ(min_soc, msg->min_soc);
+                    }
+
+                    {
+                        std::vector<interfaces::msg::Waypoint> geofence_points;
+
+                        for (const auto &p :
+                             safety_settings.get_geofence_points()) {
+                            interfaces::msg::Waypoint geofence_point;
+                            geofence_point.latitude_deg = p.at(0);
+                            geofence_point.longitude_deg = p.at(1);
+                            geofence_point.relative_altitude_m =
+                                interfaces::msg::Waypoint::INVALID_ALTITUDE;
+
+                            geofence_points.push_back(geofence_point);
+                        }
+
+                        ASSERT_EQ(geofence_points, msg->geofence_points);
+                    }
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.add_node(qr_code_scanner_node);
+        executor.add_node(fcc_bridge);
+        executor.add_node(waypoint_node);
+
+        executor.spin();
+
+        ASSERT_TRUE(safety_settings_received_flag);
+    }
+
+    // Mission Abort because of a timeout
+    {
+        MissionControl mission_control(default_options);
+        for (size_t i = 0; i < max_wait_time - 1; i++) {
+            ASSERT_NO_THROW(mission_control.mode_self_check());
+        }
+
+        ASSERT_DEATH({ mission_control.mode_self_check(); }, ".*");
+    }
 }
 
 /**
