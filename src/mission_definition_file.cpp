@@ -436,7 +436,8 @@ std::vector<command> MissionDefinitionReader::get_marker_commands(
         throw std::runtime_error(
             "MissionDefinitionReader::" + (std::string) __func__ +
             ": Marker name not "
-            "found");
+            "found: '" +
+            marker_name + "'");
 
     return markers.at(marker_name);
 }
