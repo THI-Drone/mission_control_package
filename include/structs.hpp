@@ -7,7 +7,7 @@
 /**
  * @brief Struct representing a heartbeat payload.
  */
-struct heartbeat_payload {
+struct HeartbeatPayload {
     bool received;  //!< Flag indicating if the payload has been received.
     uint32_t tick;  //!< The tick value of the payload.
     bool active;    //!< The active state of the payload.
@@ -16,7 +16,7 @@ struct heartbeat_payload {
      * @brief Default constructor for heartbeat_payload.
      * Initializes the received flag to false and the tick value to 0.
      */
-    heartbeat_payload() {
+    HeartbeatPayload() {
         received = false;
         tick = 0;
         active = false;
@@ -24,15 +24,15 @@ struct heartbeat_payload {
 };
 
 /**
- * @brief A struct representing a mission control payload.
+ * @brief A struct representing a ros node.
  *
  * This struct contains a heartbeat payload and a flag indicating whether the
  * node is allowed to start the mission.
  *
- * @note Only set the `is_fcc_bridge` flag for the actual fcc bridge
+ * @warning Only set the `is_fcc_bridge` flag for the actual fcc bridge
  */
-struct ros_node {
-    struct heartbeat_payload hb_payload;  //!< Last heartbeat payload
+struct RosNode {
+    struct HeartbeatPayload hb_payload;  //!< Last heartbeat payload
     bool can_start_mission =
         false;  //!< Flag that indicates if this node is allowed to start the
                 //!< mission (= send a MissionStart message)
@@ -42,7 +42,7 @@ struct ros_node {
     /**
      * @brief Default constructor
      */
-    ros_node() = default;
+    RosNode() = default;
 
     /**
      * @brief Initialize a node and provide values for the `can_start_mission`
@@ -50,7 +50,7 @@ struct ros_node {
      *
      * @note Only set the `is_fcc_bridge` flag for the actual fcc bridge
      */
-    ros_node(const bool can_start_mission, const bool is_fcc_bridge) {
+    RosNode(const bool can_start_mission, const bool is_fcc_bridge) {
         this->can_start_mission = can_start_mission;
         this->is_fcc_bridge = is_fcc_bridge;
     }

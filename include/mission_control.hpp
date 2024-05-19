@@ -73,8 +73,8 @@ class MissionControl : public common_lib::CommonNode {
         true;  //!< If set to true, the first event loop after a mission_state
                //!< change is happening. Will be set to false when calling
                //!< get_state_first_loop().
-    std::map<std::string, ros_node> node_map = {
-        {common_lib::node_names::FCC_BRIDGE, ros_node(true, true)},
+    std::map<std::string, RosNode> node_map = {
+        {common_lib::node_names::FCC_BRIDGE, RosNode(true, true)},
         {common_lib::node_names::WAYPOINT, {}},
         {common_lib::node_names::QRCODE_SCANNER,
          {}}};  //!< Register all the nodes for the heartbeat

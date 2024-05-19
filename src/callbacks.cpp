@@ -344,7 +344,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     }
 
     // Check tick
-    heartbeat_payload &heartbeat = node_map[msg.sender_id].hb_payload;
+    HeartbeatPayload &heartbeat = node_map[msg.sender_id].hb_payload;
     if ((msg.tick == heartbeat.tick) ||
         (msg.tick <= heartbeat.tick && msg.tick != 0)) {
         RCLCPP_ERROR(get_logger(),
@@ -393,7 +393,7 @@ void MissionControl::heartbeat_timer_callback() {
 
     for (auto &nm : node_map) {
         // Create local reference for easier access
-        heartbeat_payload &hp = nm.second.hb_payload;
+        HeartbeatPayload &hp = nm.second.hb_payload;
 
         // Check if no heartbeat was received
         if (hp.received == false) {
