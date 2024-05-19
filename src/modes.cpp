@@ -65,12 +65,22 @@ void MissionControl::mode_self_check() {
             }
         }
 
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Waiting for: [%s]: "
-                    "%us / %us",
-                    __func__, missing_conditions_str.c_str(),
-                    (i * event_loop_time_delta_ms) / 1000,
-                    (max_wait_time * event_loop_time_delta_ms) / 1000);
+        if (missing_conditions.size() <= 0) {
+            // Output that all conditions are met
+            RCLCPP_INFO(this->get_logger(),
+                        "MissionControl::%s: [OK] All conditions met: "
+                        "%us / %us",
+                        __func__, (i * event_loop_time_delta_ms) / 1000,
+                        (max_wait_time * event_loop_time_delta_ms) / 1000);
+        } else {
+            // Output that conditions are still missing
+            RCLCPP_INFO(this->get_logger(),
+                        "MissionControl::%s: [WAIT] Waiting for: [%s]: "
+                        "%us / %us",
+                        __func__, missing_conditions_str.c_str(),
+                        (i * event_loop_time_delta_ms) / 1000,
+                        (max_wait_time * event_loop_time_delta_ms) / 1000);
+        }
     }
 
     i++;
@@ -178,12 +188,22 @@ void MissionControl::mode_check_drone_configuration() {
             }
         }
 
-        RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: Waiting for: [%s]: "
-                    "%us / %us",
-                    __func__, missing_conditions_str.c_str(),
-                    (i * event_loop_time_delta_ms) / 1000,
-                    (max_wait_time * event_loop_time_delta_ms) / 1000);
+        if (missing_conditions.size() <= 0) {
+            // Output that all conditions are met
+            RCLCPP_INFO(this->get_logger(),
+                        "MissionControl::%s: [OK] All conditions met: "
+                        "%us / %us",
+                        __func__, (i * event_loop_time_delta_ms) / 1000,
+                        (max_wait_time * event_loop_time_delta_ms) / 1000);
+        } else {
+            // Output that conditions are still missing
+            RCLCPP_INFO(this->get_logger(),
+                        "MissionControl::%s: [WAIT] Waiting for: [%s]: "
+                        "%us / %us",
+                        __func__, missing_conditions_str.c_str(),
+                        (i * event_loop_time_delta_ms) / 1000,
+                        (max_wait_time * event_loop_time_delta_ms) / 1000);
+        }
     }
 
     i++;
