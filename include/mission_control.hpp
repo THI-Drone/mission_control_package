@@ -149,6 +149,11 @@ class MissionControl : public common_lib::CommonNode {
         true;  //!< If set to true, the event loop will be executed periodically
     rclcpp::TimerBase::SharedPtr event_loop_timer;
 
+    // Takeoff
+    uint32_t takeoff_timeout_ms =
+        60 /* [s] */ * 1000;  //!< Timeout after which a Mission Abort will be
+                              //!< triggered during the takeoff state
+
     // Job finished
     rclcpp::Subscription<interfaces::msg::JobFinished>::SharedPtr
         job_finished_subscription;  //!< Subscription on the `JobFinished` topic

@@ -273,9 +273,14 @@ void MissionControl::mode_check_drone_configuration() {
  * command.
  */
 void MissionControl::initiate_takeoff() {
+    static bool takeoff_initiated;  // True, if the takeoff command was sent,
+                                    // otherwise false
+
     if (get_state_first_loop()) {
         RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Takeoff initated",
                     __func__);
+
+        takeoff_initiated = false;  // reset flag
 
         // Activate Mission Control
         send_control_json(this->get_name(), true, {});
@@ -320,24 +325,47 @@ void MissionControl::initiate_takeoff() {
     }
 
     if (wait_time_finished()) {
-        // Send takeoff command
-        interfaces::msg::Waypoint waypoint_msg;
-        waypoint_msg.latitude_deg = current_position.coordinate_lat;
-        waypoint_msg.longitude_deg = current_position.coordinate_lon;
-        waypoint_msg.relative_altitude_m = 2.0;  // Takeoff to a height of 2 m
+        // Check that takeoff wasn't executed before
+        if (!takeoff_initiated) {
+            // Execute takeoff
 
-        interfaces::msg::UAVCommand msg;
-        msg.sender_id = this->get_name();
-        msg.time_stamp = this->now();
-        msg.speed_m_s = mission_definition_reader.get_safety_settings()
-                            .max_vertical_speed_mps;
-        msg.waypoint = waypoint_msg;
-        msg.type = interfaces::msg::UAVCommand::TAKE_OFF;
+            takeoff_initiated =
+                true;  // set flag to true, because the takeoff is executing now
 
-        uav_command_publisher->publish(msg);
+            // Send takeoff command
+            interfaces::msg::Waypoint waypoint_msg;
+            waypoint_msg.latitude_deg = current_position.coordinate_lat;
+            waypoint_msg.longitude_deg = current_position.coordinate_lon;
+            waypoint_msg.relative_altitude_m =
+                2.0;  // Takeoff to a height of 2 m
 
-        RCLCPP_DEBUG(this->get_logger(),
-                     "MissionControl::%s: Takeoff command sent", __func__);
+            interfaces::msg::UAVCommand msg;
+            msg.sender_id = this->get_name();
+            msg.time_stamp = this->now();
+            msg.speed_m_s = mission_definition_reader.get_safety_settings()
+                                .max_vertical_speed_mps;
+            msg.waypoint = waypoint_msg;
+            msg.type = interfaces::msg::UAVCommand::TAKE_OFF;
+
+            uav_command_publisher->publish(msg);
+
+            RCLCPP_DEBUG(this->get_logger(),
+                         "MissionControl::%s: Takeoff command sent. Starting "
+                         "timeout timer: %u ms",
+                         __func__, takeoff_timeout_ms);
+
+            // Start timeout
+            init_wait(takeoff_timeout_ms);
+        } else {
+            // Timeout occured, abort mission
+            RCLCPP_FATAL(this->get_logger(),
+                         "MissionControl::%s: Takeoff timed out after %u ms",
+                         __func__, takeoff_timeout_ms);
+
+            mission_abort("MissionControl::" + (std::string) __func__ +
+                          ": Takeoff timed out after " +
+                          std::to_string(takeoff_timeout_ms) + " ms");
+        }
     }
 
     if (current_mission_finished()) {
@@ -352,8 +380,8 @@ void MissionControl::initiate_takeoff() {
 
         set_mission_state(decision_maker);
         RCLCPP_INFO(this->get_logger(),
-                    "MissionControl::%s: make_decision state activated",
-                    __func__);
+                    "MissionControl::%s: '%s' state activated", __func__,
+                    get_mission_state_str(decision_maker));
     }
 }
 

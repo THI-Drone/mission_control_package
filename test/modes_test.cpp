@@ -3,6 +3,7 @@
 #include <chrono>
 #include <cinttypes>
 #include <nlohmann/json.hpp>
+#include <optional>
 
 #include "common_package/commands.hpp"
 #include "common_package/common_node.hpp"
@@ -649,6 +650,73 @@ TEST(mission_control_package, initiate_takeoff_test) {
         executor.add_node(waypoint_node);
 
         ASSERT_DEATH({ executor.spin(); }, ".*");
+    }
+
+    // Mission Abort, because of a timeout
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Manually set variables
+        mission_control_node->current_flight_mode =
+            interfaces::msg::FlightMode::HOLD;
+        mission_control_node->current_landed_state =
+            interfaces::msg::LandedState::ON_GROUND;
+        mission_control_node->current_position.values_set = true;
+        mission_control_node->takeoff_timeout_ms = 3000;
+        mission_control_node->set_mission_state(MissionControl::takeoff);
+
+        // Create demo nodes
+        class OpenCommonNode : public common_lib::CommonNode {
+           public:
+            OpenCommonNode(const std::string &id) : CommonNode(id) {}
+
+            void activate_wrapper() { this->activate(); }
+        };
+
+        std::shared_ptr<common_lib::CommonNode> qr_code_scanner_node =
+            std::make_shared<common_lib::CommonNode>(
+                common_lib::node_names::QRCODE_SCANNER);
+
+        std::shared_ptr<OpenCommonNode> fcc_bridge =
+            std::make_shared<OpenCommonNode>(
+                common_lib::node_names::FCC_BRIDGE);
+        fcc_bridge->activate_wrapper();
+
+        std::shared_ptr<common_lib::CommonNode> waypoint_node =
+            std::make_shared<common_lib::CommonNode>(
+                common_lib::node_names::WAYPOINT);
+
+        executor.add_node(mission_control_node);
+
+        executor.add_node(qr_code_scanner_node);
+        executor.add_node(fcc_bridge);
+        executor.add_node(waypoint_node);
+
+        const rclcpp::Time timestamp_start = mission_control_node->now();
+
+        ASSERT_DEATH({ executor.spin(); }, ".*");
+
+        const rclcpp::Time timestamp_end = mission_control_node->now();
+
+        // Check that timeout triggered at the correct time (+- 1s)
+        ASSERT_GT(
+            (timestamp_end - timestamp_start).nanoseconds(),
+            rclcpp::Duration(
+                std::chrono::duration<double, std::milli>(
+                    mission_control_node->takeoff_timeout_ms +
+                    mission_control_node->wait_time_between_msgs_ms - 1000))
+                .nanoseconds());
+
+        ASSERT_LT(
+            (timestamp_end - timestamp_start).nanoseconds(),
+            rclcpp::Duration(
+                std::chrono::duration<double, std::milli>(
+                    mission_control_node->takeoff_timeout_ms +
+                    mission_control_node->wait_time_between_msgs_ms + 1000))
+                .nanoseconds());
     }
 }
 
