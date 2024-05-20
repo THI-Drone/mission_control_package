@@ -369,6 +369,9 @@ void MissionControl::initiate_takeoff() {
     }
 
     if (current_mission_finished()) {
+        // Cancel timeout timer
+        cancel_wait();
+
         // Takeoff finished
         RCLCPP_INFO(this->get_logger(), "MissionControl::%s: Takeoff finished",
                     __func__);
