@@ -349,13 +349,13 @@ void MissionControl::initiate_takeoff() {
 
             uav_command_publisher->publish(msg);
 
-            RCLCPP_DEBUG(this->get_logger(),
-                         "MissionControl::%s: Takeoff command sent. Starting "
-                         "timeout timer: %u ms",
-                         __func__, takeoff_timeout_ms);
-
             // Start timeout
             init_wait(takeoff_timeout_ms);
+
+            RCLCPP_INFO(this->get_logger(),
+                        "MissionControl::%s: Takeoff command sent. Starting "
+                        "timeout timer: %us",
+                        __func__, takeoff_timeout_ms / 1000);
         } else {
             // Timeout occured, abort mission
             RCLCPP_FATAL(this->get_logger(),
