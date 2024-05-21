@@ -20,6 +20,22 @@
 // Message includes
 #include "interfaces/msg/job_finished.hpp"
 
+/**
+ * @brief Test case for the `mission_control_package` module's
+ * `job_finished_callback` function.
+ *
+ * This test verifies the behavior of the `job_finished_callback` function in
+ * different scenarios:
+ * - Successfull JobFinished message from an active node
+ * - Successfull JobFinished message from an inactive node
+ * - Failed JobFinished message from an active node
+ * - Failed JobFinished message from an inactive node
+ *
+ * The test sets up a mission control node and a test node, and publishes
+ * JobFinished messages to the mission control node. It checks that the mission
+ * control node handles the messages correctly and performs the necessary
+ * actions.
+ */
 TEST(mission_control_package, job_finished_callback_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
