@@ -940,11 +940,11 @@ TEST(mission_control_package, command_callback_test) {
 }
 
 /**
- * @brief Test case for the `heartbeat_callback_test` function.
+ * @brief Test case for the `mission_control_package` heartbeat callback.
  *
- * This test case verifies the behavior of the `heartbeat_callback_test`
- * function. It tests various scenarios related to heartbeat messages received
- * by the mission control node. The test covers both success and failure cases.
+ * This test case verifies the behavior of the heartbeat callback function in
+ * the `mission_control_package`. It tests various scenarios including unknown
+ * sender ID being ignored, probation period, and FCC bridge active states.
  */
 TEST(mission_control_package, heartbeat_callback_test) {
     rclcpp::NodeOptions default_options;
