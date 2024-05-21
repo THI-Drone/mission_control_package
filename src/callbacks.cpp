@@ -359,6 +359,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
                               "' was active even though it should be deactive");
             }
         }
+
         if ((!msg.active) && (msg.sender_id == get_active_node_id())) {
             if (get_probation_period() &&
                 msg.sender_id == get_last_active_node_id()) {
