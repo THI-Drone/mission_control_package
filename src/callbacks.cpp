@@ -264,7 +264,8 @@ void MissionControl::command_callback(const interfaces::msg::UAVCommand &msg) {
                  __func__, common_lib::topic_names::UAVCommand,
                  msg.sender_id.c_str());
 
-    // Only Mission Control is allowed to send on this topic
+    // Check that sender id is Mission Control, as only Mission Control is
+    // allowed to send on this topic
     if (msg.sender_id != this->get_name()) {
         mission_abort(
             "MissionControl::" + (std::string) __func__ +
