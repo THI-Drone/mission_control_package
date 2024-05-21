@@ -20,6 +20,8 @@
 // Message includes
 #include "interfaces/msg/job_finished.hpp"
 #include "interfaces/msg/mission_start.hpp"
+#include "interfaces/msg/uav_command.hpp"
+#include "interfaces/msg/uav_waypoint_command.hpp"
 
 /**
  * @brief Test case for the `mission_control_package` module's
@@ -550,6 +552,15 @@ TEST(mission_control_package, mission_start_callback_test) {
     }
 }
 
+/**
+ * @brief Test case for the `mission_control_package` module's
+ * `waypoint_command_callback` function.
+ *
+ * This test case verifies the behavior of the `waypoint_command_callback`
+ * function in the `MissionControl` class. It tests various scenarios such as
+ * successful waypoint command check, probation period, too old timestamp,
+ * inactive sender node, and mission not running.
+ */
 TEST(mission_control_package, waypoint_command_callback_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
@@ -822,5 +833,94 @@ TEST(mission_control_package, waypoint_command_callback_test) {
 
             ASSERT_DEATH({ executor.spin(); }, ".*");
         }
+    }
+}
+
+TEST(mission_control_package, command_callback_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test successfull command sent by Mission Control
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        const auto message_publisher =
+            mission_control_node->create_publisher<interfaces::msg::UAVCommand>(
+                common_lib::topic_names::UAVCommand, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [mission_control_node, &message_publisher]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVCommand msg;
+                    msg.sender_id = mission_control_node->get_name();
+                    msg.time_stamp = mission_control_node->now();
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(100),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Shutting down test");
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Test unauthorized command sent by another node
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>(common_lib::node_names::WAYPOINT);
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVCommand>(
+                common_lib::topic_names::UAVCommand, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVCommand msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+
+                    message_publisher->publish(msg);
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        ASSERT_DEATH({ executor.spin(); }, ".*");
     }
 }
