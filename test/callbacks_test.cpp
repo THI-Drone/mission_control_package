@@ -836,6 +836,19 @@ TEST(mission_control_package, waypoint_command_callback_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case verifies the behavior of the command_callback function in the
+ * mission_control_package. It consists of two sub-tests:
+ * 1. Test successfull command sent by Mission Control: This sub-test creates a
+ * mission_control_node and publishes a UAVCommand message. It verifies that the
+ * message is published successfully.
+ * 2. Test unauthorized command sent by another node: This sub-test creates a
+ * mission_control_node and a test_node. The test_node publishes a UAVCommand
+ * message with a different sender_id. It verifies that the mission_control_node
+ * does not process the unauthorized command and shuts down the test.
+ */
 TEST(mission_control_package, command_callback_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
