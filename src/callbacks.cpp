@@ -386,7 +386,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
         (msg.tick <= heartbeat.tick && msg.tick != 0)) {
         RCLCPP_ERROR(get_logger(),
                      "MissionControl::%s: Invalid tick '%u' "
-                     "received from: %s. Ignoring heartbeat message",
+                     "received from: %s. Ignoring heartbeat message.",
                      __func__, msg.tick, msg.sender_id.c_str());
         return;
     }
@@ -438,7 +438,7 @@ void MissionControl::heartbeat_timer_callback() {
             err_flag = true;
             RCLCPP_ERROR(this->get_logger(),
                          "MissionControl::%s: No heartbeat "
-                         "from '%s' received!",
+                         "from '%s' received",
                          __func__, nm.first.c_str());
         }
 
@@ -449,7 +449,7 @@ void MissionControl::heartbeat_timer_callback() {
             // mission
             RCLCPP_ERROR(this->get_logger(),
                          "MissionControl::%s: Node '%s' "
-                         "is not active but this is required for the mission!",
+                         "is not active, but this is required for the mission",
                          __func__, nm.first.c_str());
         }
 
