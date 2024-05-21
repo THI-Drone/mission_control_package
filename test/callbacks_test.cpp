@@ -1034,7 +1034,7 @@ TEST(mission_control_package, heartbeat_callback_test) {
             common_lib::topic_names::Heartbeat, 10);
 
     rclcpp::TimerBase::SharedPtr trigger_timer = test_node->create_wall_timer(
-        std::chrono::milliseconds(5),
+        std::chrono::milliseconds(10),
         [test_node, mission_control_node, &message_publisher,
          &test_node_heartbeat_tick, &heartbeat_counter]() {
             RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
@@ -1107,7 +1107,7 @@ TEST(mission_control_package, heartbeat_callback_test) {
             common_lib::topic_names::Heartbeat, 10);
 
     rclcpp::TimerBase::SharedPtr trigger_timer = test_node->create_wall_timer(
-        std::chrono::milliseconds(5),
+        std::chrono::milliseconds(10),
         [test_node, mission_control_node, &message_publisher,
          &test_node_heartbeat_tick, &heartbeat_counter]() {
             RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
