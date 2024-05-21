@@ -163,6 +163,25 @@ void MissionControl::waypoint_command_callback(
                  common_lib::topic_names::UAVWaypointCommand,
                  msg.sender_id.c_str());
 
+    // Check that the mission is running
+    if (get_mission_state() == prepare_mission ||
+        get_mission_state() == selfcheck ||
+        get_mission_state() == check_drone_configuration ||
+        get_mission_state() == armed) {
+        // Abort mission
+        RCLCPP_FATAL(get_logger(),
+                     "MissionControl::%s: The node '%s' sent a message on the "
+                     "'%s' topic, but the mission has not started yet",
+                     __func__, msg.sender_id.c_str(),
+                     common_lib::topic_names::UAVWaypointCommand);
+
+        mission_abort((std::string) "MissionControl::" + __func__ +
+                      ": The node '" + msg.sender_id +
+                      "' sent a message on the '" +
+                      common_lib::topic_names::UAVWaypointCommand +
+                      "' topic, but the mission has not started yet");
+    }
+
     // Check that sender is allowed to send on the topic
     if (msg.sender_id != get_active_node_id()) {
         // Check timestamp: If it is too old, ingore message as sender might
