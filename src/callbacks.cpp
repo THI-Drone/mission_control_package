@@ -23,14 +23,25 @@ void MissionControl::job_finished_callback(
     try {
         payload = nlohmann::json::parse(msg.payload);
     } catch (const nlohmann::json::exception &e) {
-        RCLCPP_ERROR(this->get_logger(),
-                     "MissionControl::%s: "
-                     "Failed to parse json in payload",
-                     __func__);
+        RCLCPP_FATAL(
+            this->get_logger(),
+            "MissionControl::%s: "
+            "Failed to parse json formatted payload: '%s' - Payload: '%s'",
+            __func__, e.what(), msg.payload.c_str());
+
+        mission_abort((std::string) "MissionControl::" + __func__ +
+                      ": Failed to parse json formatted payload: '" + e.what() +
+                      "' - Payload: '" + msg.payload + "'");
     }
 
     // Check error code
     if (msg.error_code != EXIT_SUCCESS) {
+        // Check if sender node is currently active
+        if (msg.sender_id == get_active_node_id()) {
+            // Send control message to explicitly deactivate node
+            send_control_json(msg.sender_id, false, {});
+        }
+
         // Abort mission
         std::string error_msg = "MissionControl::" + (std::string) __func__ +
                                 ": Received "
@@ -39,6 +50,8 @@ void MissionControl::job_finished_callback(
 
         if (payload.contains("error_msg"))
             error_msg += ". Error Message: " + payload.at("error_msg").dump();
+        else
+            error_msg += ". Payload: '" + msg.payload + "'";
 
         mission_abort(error_msg);
         return;
@@ -47,7 +60,7 @@ void MissionControl::job_finished_callback(
     // Ignore message if sender node is not active as this might be a delayed
     // message or a programming error in the sender node
     if (msg.sender_id != get_active_node_id()) {
-        RCLCPP_WARN(
+        RCLCPP_ERROR(
             this->get_logger(),
             "MissionControl::%s: Got a successfull "
             "job_finished message from an inactive node: %s. Ignoring message.",
@@ -71,6 +84,7 @@ void MissionControl::job_finished_callback(
                 "successfully: node_id: '%s', payload: '%s'",
                 __func__, msg.sender_id.c_str(), payload.dump().c_str());
 
+    // Set flag to true to indicate a successfully finished job
     job_finished_successfully = true;
 }
 
