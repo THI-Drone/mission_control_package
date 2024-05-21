@@ -386,7 +386,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
         (msg.tick <= heartbeat.tick && msg.tick != 0)) {
         RCLCPP_ERROR(get_logger(),
                      "MissionControl::%s: Invalid tick '%u' "
-                     "received from: %s. Ignoring heartbeat message.",
+                     "received from: '%s'. Ignoring heartbeat message.",
                      __func__, msg.tick, msg.sender_id.c_str());
         return;
     }
