@@ -92,8 +92,8 @@ void MissionControl::job_finished_callback(
  * @brief Starts the mission based on the received command.
  *
  * This function is called when a mission start command is received. It verifies
- * the current mission state (must be armed), checks if the sender node is known
- * and allowed to start the mission, and then initiates the mission.
+ * the current mission state (must be `armed`), checks if the sender node is
+ * known and allowed to start the mission, and then initiates the mission.
  *
  * @param msg The mission start command message
  */

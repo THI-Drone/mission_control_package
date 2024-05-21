@@ -19,6 +19,7 @@
 
 // Message includes
 #include "interfaces/msg/job_finished.hpp"
+#include "interfaces/msg/mission_start.hpp"
 
 /**
  * @brief Test case for the `mission_control_package` module's
@@ -322,5 +323,220 @@ TEST(mission_control_package, job_finished_callback_test) {
         executor.add_node(test_node);
 
         ASSERT_DEATH({ executor.spin(); }, ".*");
+    }
+}
+
+TEST(mission_control_package, mission_start_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test successfull Mission Start
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Set mission state to 'armed'
+        mission_control_node->set_mission_state(MissionControl::armed);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>(common_lib::node_names::FCC_BRIDGE);
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::MissionStart>(
+                common_lib::topic_names::MissionStart, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::MissionStart msg;
+                    msg.sender_id = test_node->get_name();
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr check_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(100),
+                [mission_control_node, &executor]() {
+                    // Check that mission started
+                    ASSERT_EQ("init",
+                              mission_control_node->get_active_marker_name());
+                    ASSERT_EQ(MissionControl::takeoff,
+                              mission_control_node->get_mission_state());
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test Mission Start while not in 'armed' state
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Set mission state to 'prepare_mission'
+        mission_control_node->set_mission_state(
+            MissionControl::prepare_mission);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>(common_lib::node_names::FCC_BRIDGE);
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::MissionStart>(
+                common_lib::topic_names::MissionStart, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::MissionStart msg;
+                    msg.sender_id = test_node->get_name();
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr check_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(100),
+                [mission_control_node, &executor]() {
+                    // Check that mission didn't start
+                    ASSERT_EQ(MissionControl::prepare_mission,
+                              mission_control_node->get_mission_state());
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test Mission Start with unknown node id
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Set mission state to 'armed'
+        mission_control_node->set_mission_state(MissionControl::armed);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::MissionStart>(
+                common_lib::topic_names::MissionStart, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::MissionStart msg;
+                    msg.sender_id = test_node->get_name();
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr check_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(100),
+                [mission_control_node, &executor]() {
+                    // Check that mission didn't start
+                    ASSERT_EQ(MissionControl::armed,
+                              mission_control_node->get_mission_state());
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test Mission Start with unauthorized node id
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Set mission state to 'armed'
+        mission_control_node->set_mission_state(MissionControl::armed);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>(common_lib::node_names::WAYPOINT);
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::MissionStart>(
+                common_lib::topic_names::MissionStart, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::MissionStart msg;
+                    msg.sender_id = test_node->get_name();
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr check_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(100),
+                [mission_control_node, &executor]() {
+                    // Check that mission didn't start
+                    ASSERT_EQ(MissionControl::armed,
+                              mission_control_node->get_mission_state());
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
     }
 }
