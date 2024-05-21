@@ -188,7 +188,7 @@ void MissionControl::waypoint_command_callback(
         // have been allowed to send at that time (defined by
         // 'max_waypoint_command_msg_time_difference_ms' constant)
         if (timestamp_now - rclcpp::Time(msg.time_stamp) >
-            rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+            rclcpp::Duration(std::chrono::duration<uint32_t, std::milli>(
                 max_waypoint_command_msg_time_difference_ms))) {
             // Send Error message
             RCLCPP_ERROR(get_logger(),
@@ -395,7 +395,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
     // Check if timestamp is too old (defined by
     // 'heartbeat_max_timestamp_age_ms' constant)
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
-        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+        rclcpp::Duration(std::chrono::duration<uint32_t, std::milli>(
             heartbeat_max_timestamp_age_ms))) {
         RCLCPP_FATAL(get_logger(),
                      "MissionControl::%s: Received too old "
@@ -530,7 +530,7 @@ void MissionControl::position_callback(
     // Check if timestamp is too old (defined by
     // 'max_position_msg_time_difference_ms' constant)
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
-        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+        rclcpp::Duration(std::chrono::duration<uint32_t, std::milli>(
             max_position_msg_time_difference_ms))) {
         // Reset current_position as we can no longer reliabely know where we
         // are
@@ -588,7 +588,7 @@ void MissionControl::mission_progress_callback(
     // Check if timestamp is too old (defined by
     // 'max_progress_msg_time_difference_ms' constant)
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
-        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+        rclcpp::Duration(std::chrono::duration<uint32_t, std::milli>(
             max_progress_msg_time_difference_ms))) {
         // Warn
         RCLCPP_WARN(get_logger(),
@@ -626,7 +626,7 @@ void MissionControl::flight_state_callback(
     // Check if timestamp is too old (defined by
     // 'max_flight_state_msg_time_difference_ms' constant)
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
-        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+        rclcpp::Duration(std::chrono::duration<uint32_t, std::milli>(
             max_flight_state_msg_time_difference_ms))) {
         // Warn and ignore message
         RCLCPP_WARN(get_logger(),
@@ -670,7 +670,7 @@ void MissionControl::health_callback(const interfaces::msg::UAVHealth &msg) {
     // Check if timestamp is too old (defined by
     // 'max_health_msg_time_difference_ms' constant)
     if (timestamp_now - rclcpp::Time(msg.time_stamp) >
-        rclcpp::Duration(std::chrono::duration<int64_t, std::milli>(
+        rclcpp::Duration(std::chrono::duration<uint32_t, std::milli>(
             max_health_msg_time_difference_ms))) {
         // Warn and ignore message
         RCLCPP_WARN(

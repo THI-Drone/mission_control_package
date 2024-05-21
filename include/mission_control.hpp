@@ -121,7 +121,7 @@ class MissionControl : public common_lib::CommonNode {
         probation_period_timer;  //!< Timer for the probation period
 
     // Wait Time
-    static constexpr uint16_t wait_time_between_msgs_ms =
+    static constexpr uint32_t wait_time_between_msgs_ms =
         50;  //!< Wait time between messages in ms to avoid confusion
     bool wait_time_finished_ok =
         false;  //!< True if wait time finished, otherwise false
@@ -191,9 +191,9 @@ class MissionControl : public common_lib::CommonNode {
         command_subscription;  //!< Subscription on the `UAVCommand` topic
 
     // Heartbeat
-    static constexpr uint16_t heartbeat_period_ms =
+    static constexpr uint32_t heartbeat_period_ms =
         500;  //!< Heartbeat period in ms
-    static constexpr uint16_t heartbeat_max_timestamp_age_ms =
+    static constexpr uint32_t heartbeat_max_timestamp_age_ms =
         50;  //!< Maximum allowed time difference between timestamp in heartbeat
              //!< message and current time
     bool heartbeat_received_all =
@@ -206,19 +206,19 @@ class MissionControl : public common_lib::CommonNode {
         heartbeat_subscription;  //!< Subsription on the `Heartbeat` topic
 
     // FCC Bridge callbacks
-    static constexpr uint16_t max_position_msg_time_difference_ms =
+    static constexpr uint32_t max_position_msg_time_difference_ms =
         100;  //!< Maximum age of a position message from FCC bridge
 
-    static constexpr uint16_t max_progress_msg_time_difference_ms =
+    static constexpr uint32_t max_progress_msg_time_difference_ms =
         500;  //!< Maximum age of a progress message from FCC bridge
 
-    static constexpr uint16_t max_flight_state_msg_time_difference_ms =
+    static constexpr uint32_t max_flight_state_msg_time_difference_ms =
         200;  //!< Maximum age of a flight state message from FCC bridge
 
-    static constexpr uint16_t max_health_msg_time_difference_ms =
+    static constexpr uint32_t max_health_msg_time_difference_ms =
         500;  //!< Maximum age of a health message from FCC bridge
 
-    static constexpr uint16_t max_waypoint_command_msg_time_difference_ms =
+    static constexpr uint32_t max_waypoint_command_msg_time_difference_ms =
         200;  //!< Maximum age of a waypoint command message to FCC bridge
 
     // FCC Bridge callbacks
