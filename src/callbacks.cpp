@@ -260,8 +260,9 @@ void MissionControl::waypoint_command_callback(
  */
 void MissionControl::command_callback(const interfaces::msg::UAVCommand &msg) {
     RCLCPP_DEBUG(this->get_logger(),
-                 "MissionControl::%s: Checking '%s' message from %s", __func__,
-                 common_lib::topic_names::UAVCommand, msg.sender_id.c_str());
+                 "MissionControl::%s: Checking '%s' message from '%s'",
+                 __func__, common_lib::topic_names::UAVCommand,
+                 msg.sender_id.c_str());
 
     // Only Mission Control is allowed to send on this topic
     if (msg.sender_id != this->get_name()) {
