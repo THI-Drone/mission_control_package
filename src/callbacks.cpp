@@ -354,6 +354,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
                              "MissionControl::%s: Node '%s' is active even "
                              "though it should be deactive",
                              __func__, msg.sender_id.c_str());
+
                 mission_abort("MissionControl::" + (std::string) __func__ +
                               ": Node '" + msg.sender_id +
                               "' was active even though it should be deactive");
@@ -361,8 +362,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
         }
 
         if ((!msg.active) && (msg.sender_id == get_active_node_id())) {
-            if (get_probation_period() &&
-                msg.sender_id == get_last_active_node_id()) {
+            if (get_probation_period()) {
                 RCLCPP_ERROR(get_logger(),
                              "MissionControl::%s: Node '%s' is deactive even "
                              "though it should be active. Ignoring this fact "
@@ -373,6 +373,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
                              "MissionControl::%s: Node '%s' is deactive "
                              "even though it should be active",
                              __func__, msg.sender_id.c_str());
+
                 mission_abort("MissionControl::" + (std::string) __func__ +
                               ": Node '" + msg.sender_id +
                               "' was deactive even though it should be active");
@@ -388,6 +389,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
                      "MissionControl::%s: Invalid tick '%u' "
                      "received from: '%s'. Ignoring heartbeat message.",
                      __func__, msg.tick, msg.sender_id.c_str());
+
         return;
     }
     heartbeat.tick = msg.tick;
