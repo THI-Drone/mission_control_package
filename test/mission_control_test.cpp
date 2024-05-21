@@ -84,7 +84,10 @@ TEST(mission_control_package, constructor_test) {
  */
 TEST(mission_control_package, send_control_test) {
     rclcpp::NodeOptions default_options;
-    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
 
     // Check if "active = false" and target is active_node_id
     {
@@ -258,7 +261,10 @@ TEST(mission_control_package, send_control_test) {
  */
 TEST(mission_control_package, send_control_json_test) {
     rclcpp::NodeOptions default_options;
-    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
 
     // Check with valid json
     {
@@ -353,7 +359,10 @@ TEST(mission_control_package, send_control_json_test) {
  */
 TEST(mission_control_package, mission_abort_test) {
     rclcpp::NodeOptions default_options;
-    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
 
     // Without any active node
     {
@@ -458,7 +467,10 @@ TEST(mission_control_package, mission_abort_test) {
  */
 TEST(mission_control_package, mission_finished_test) {
     rclcpp::NodeOptions default_options;
-    default_options.append_parameter_override("MDF_FILE_PATH", "DEFAULT");
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
 
     // Without any active node
     {
