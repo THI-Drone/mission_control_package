@@ -326,6 +326,15 @@ TEST(mission_control_package, job_finished_callback_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case verifies the behavior of the mission start functionality in
+ * the mission_control_package. It includes multiple test scenarios such as
+ * successful mission start, mission start while not in 'armed' state, mission
+ * start with an unknown node id, and mission start with an unauthorized node
+ * id.
+ */
 TEST(mission_control_package, mission_start_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
