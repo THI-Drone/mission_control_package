@@ -295,7 +295,7 @@ class MissionControl : public common_lib::CommonNode {
     void job_finished_callback(const interfaces::msg::JobFinished &msg);
 
     // Mission start
-    void mission_start(const interfaces::msg::MissionStart &msg);
+    void mission_start_callback(const interfaces::msg::MissionStart &msg);
 
     // Control Functions
     void send_control(const std::string &target_id, const bool active,

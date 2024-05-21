@@ -78,7 +78,7 @@ MissionControl::MissionControl(const rclcpp::NodeOptions &options)
     mission_start_subscription =
         this->create_subscription<interfaces::msg::MissionStart>(
             common_lib::topic_names::MissionStart, 10,
-            std::bind(&MissionControl::mission_start, this, _1));
+            std::bind(&MissionControl::mission_start_callback, this, _1));
 
     // Mission Finished
     mission_finished_publisher =

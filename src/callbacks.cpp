@@ -97,7 +97,8 @@ void MissionControl::job_finished_callback(
  *
  * @param msg The mission start command message
  */
-void MissionControl::mission_start(const interfaces::msg::MissionStart &msg) {
+void MissionControl::mission_start_callback(
+    const interfaces::msg::MissionStart &msg) {
     RCLCPP_INFO(this->get_logger(),
                 "MissionControl::%s: Received mission start command from %s",
                 __func__, msg.sender_id.c_str());
