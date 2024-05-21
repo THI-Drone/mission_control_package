@@ -3,7 +3,7 @@
 #include <chrono>
 #include <cinttypes>
 #include <nlohmann/json.hpp>
-#include <optional>
+#include <unordered_set>
 
 #include "common_package/commands.hpp"
 #include "common_package/common_node.hpp"
@@ -335,7 +335,7 @@ TEST(mission_control_package, job_finished_callback_test) {
  * start with an unknown node id, and mission start with an unauthorized node
  * id.
  */
-TEST(mission_control_package, mission_start_test) {
+TEST(mission_control_package, mission_start_callback_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
         "MDF_FILE_PATH",
@@ -547,5 +547,280 @@ TEST(mission_control_package, mission_start_test) {
         executor.add_node(test_node);
 
         executor.spin();
+    }
+}
+
+TEST(mission_control_package, waypoint_command_callback_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test successfull waypoint command check
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Set mission state to 'fly_to_waypoint'
+        mission_control_node->set_mission_state(
+            MissionControl::fly_to_waypoint);
+
+        // Set active node id
+        mission_control_node->set_active_node_id(
+            common_lib::node_names::WAYPOINT);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>(common_lib::node_names::WAYPOINT);
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVWaypointCommand>(
+                common_lib::topic_names::UAVWaypointCommand, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVWaypointCommand msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(100),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Shutting down");
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test successfull waypoint command check during probation period
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Set mission state to 'fly_to_waypoint'
+        mission_control_node->set_mission_state(
+            MissionControl::fly_to_waypoint);
+
+        // Set last active node id and thereby start probation period
+        mission_control_node->set_active_node_id(
+            common_lib::node_names::WAYPOINT);
+        mission_control_node->clear_active_node_id();
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>(common_lib::node_names::WAYPOINT);
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVWaypointCommand>(
+                common_lib::topic_names::UAVWaypointCommand, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVWaypointCommand msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    MissionControl::probation_period_length_ms - 10),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Shutting down");
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test successfull waypoint command check with too old timestamp while node
+    // is not active
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Set mission state to 'fly_to_waypoint'
+        mission_control_node->set_mission_state(
+            MissionControl::fly_to_waypoint);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>(common_lib::node_names::WAYPOINT);
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVWaypointCommand>(
+                common_lib::topic_names::UAVWaypointCommand, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVWaypointCommand msg;
+                    msg.sender_id = test_node->get_name();
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    MissionControl::probation_period_length_ms - 10),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Shutting down");
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test failed waypoint command check with inactive sender node
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Set mission state to 'fly_to_waypoint'
+        mission_control_node->set_mission_state(
+            MissionControl::fly_to_waypoint);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>(common_lib::node_names::WAYPOINT);
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVWaypointCommand>(
+                common_lib::topic_names::UAVWaypointCommand, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVWaypointCommand msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+
+                    message_publisher->publish(msg);
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        ASSERT_DEATH({ executor.spin(); }, ".*");
+    }
+
+    // Test failed waypoint command check because the mission is not running
+    {
+        // All the states that indicate a not running mission
+        std::unordered_set<MissionControl::MissionState_t> states = {
+            MissionControl::prepare_mission, MissionControl::selfcheck,
+            MissionControl::check_drone_configuration, MissionControl::armed};
+
+        for (const auto &state : states) {
+            rclcpp::executors::SingleThreadedExecutor executor;
+
+            std::shared_ptr<MissionControl> mission_control_node =
+                std::make_shared<MissionControl>(default_options);
+
+            // Deactivate event loop so it doesn't mess with our test
+            mission_control_node->event_loop_active = false;
+
+            // Set mission state
+            mission_control_node->set_mission_state(state);
+            RCLCPP_DEBUG(mission_control_node->get_logger(),
+                         "Testing state: '%s'",
+                         mission_control_node->get_mission_state_str());
+
+            // Set active node id
+            mission_control_node->set_active_node_id(
+                common_lib::node_names::WAYPOINT);
+
+            // Create test node
+            std::shared_ptr<rclcpp::Node> test_node =
+                std::make_shared<rclcpp::Node>(
+                    common_lib::node_names::WAYPOINT);
+
+            const auto message_publisher =
+                test_node
+                    ->create_publisher<interfaces::msg::UAVWaypointCommand>(
+                        common_lib::topic_names::UAVWaypointCommand, 10);
+
+            rclcpp::TimerBase::SharedPtr trigger_timer =
+                test_node->create_wall_timer(
+                    std::chrono::milliseconds(10),
+                    [test_node, &message_publisher]() {
+                        RCLCPP_DEBUG(test_node->get_logger(),
+                                     "Publishing message");
+
+                        // Create and publish message
+                        interfaces::msg::UAVWaypointCommand msg;
+                        msg.sender_id = test_node->get_name();
+                        msg.time_stamp = test_node->now();
+
+                        message_publisher->publish(msg);
+                    });
+
+            executor.add_node(mission_control_node);
+            executor.add_node(test_node);
+
+            ASSERT_DEATH({ executor.spin(); }, ".*");
+        }
     }
 }
