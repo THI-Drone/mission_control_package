@@ -82,6 +82,7 @@ if(BUILD_TESTING)
                   test/event_loop_guard_test.cpp
                   test/modes_test.cpp
                   test/structs_test.cpp
+                  test/callbacks_test.cpp
                   test/mission_file_reader/mission_file_reader_test.cpp)
   target_include_directories(${PROJECT_NAME}_test PUBLIC
           $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
