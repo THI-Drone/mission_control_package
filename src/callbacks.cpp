@@ -197,7 +197,7 @@ void MissionControl::waypoint_command_callback(
                 "MissionControl::%s: The node '%s' sent a message on the "
                 "'%s' topic, but it is not allowed to do so. "
                 "Currently allowed node: '%s'. This fact is ignored because of "
-                "the probation period.",
+                "the current probation period.",
                 __func__, msg.sender_id.c_str(),
                 common_lib::topic_names::UAVWaypointCommand,
                 get_active_node_id().c_str());
@@ -213,10 +213,10 @@ void MissionControl::waypoint_command_callback(
                      common_lib::topic_names::UAVWaypointCommand,
                      get_active_node_id().c_str());
 
-        mission_abort("MissionControl::" + (std::string) __func__ +
+        mission_abort((std::string) "MissionControl::" + __func__ +
                       ": Unauthorized node '" + msg.sender_id +
                       "' sending on '" +
-                      (std::string)common_lib::topic_names::UAVWaypointCommand +
+                      common_lib::topic_names::UAVWaypointCommand +
                       "' topic registered. Currently active node: '" +
                       get_active_node_id() + "'");
     }
