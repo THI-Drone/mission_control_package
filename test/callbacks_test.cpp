@@ -1007,69 +1007,215 @@ TEST(mission_control_package, heartbeat_callback_test) {
         executor.spin();
     }
 
-    // Test fcc bridge active states
-    {// Test 'selfcheck' and 'prepare_mission' states, where fcc bridge
-     // doesn't need to be active
-     {std::unordered_set<MissionControl::MissionState_t> states = {
-          MissionControl::selfcheck, MissionControl::prepare_mission};
+    // Test probation period
+    {// Test with node being active even though it shouldn't be
+     {rclcpp::executors::SingleThreadedExecutor executor;
 
-    for (const auto &state : states) {
-        rclcpp::executors::SingleThreadedExecutor executor;
+    std::shared_ptr<MissionControl> mission_control_node =
+        std::make_shared<MissionControl>(default_options);
 
-        std::shared_ptr<MissionControl> mission_control_node =
-            std::make_shared<MissionControl>(default_options);
+    // Deactivate event loop so it doesn't mess with our test
+    mission_control_node->event_loop_active = false;
 
-        // Deactivate event loop so it doesn't mess with our test
-        mission_control_node->event_loop_active = false;
+    // Set last active node id and trigger probation period
+    mission_control_node->set_active_node_id(common_lib::node_names::WAYPOINT);
+    mission_control_node->clear_active_node_id();
 
-        // Set mission state
-        mission_control_node->set_mission_state(state);
+    size_t heartbeat_counter = 0;
 
-        // Create test node
-        std::shared_ptr<rclcpp::Node> test_node =
-            std::make_shared<rclcpp::Node>(common_lib::node_names::FCC_BRIDGE);
+    // Create test node
+    std::shared_ptr<rclcpp::Node> test_node =
+        std::make_shared<rclcpp::Node>(common_lib::node_names::WAYPOINT);
 
-        uint32_t test_node_tick = 0;
+    uint32_t test_node_heartbeat_tick = 0;
 
-        const auto message_publisher =
-            test_node->create_publisher<interfaces::msg::Heartbeat>(
-                common_lib::topic_names::Heartbeat, 10);
+    const auto message_publisher =
+        test_node->create_publisher<interfaces::msg::Heartbeat>(
+            common_lib::topic_names::Heartbeat, 10);
 
-        rclcpp::TimerBase::SharedPtr trigger_timer =
-            test_node->create_wall_timer(
-                std::chrono::milliseconds(10),
-                [test_node, &message_publisher, &test_node_tick]() {
-                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+    rclcpp::TimerBase::SharedPtr trigger_timer = test_node->create_wall_timer(
+        std::chrono::milliseconds(5),
+        [test_node, mission_control_node, &message_publisher,
+         &test_node_heartbeat_tick, &heartbeat_counter]() {
+            RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
 
-                    // Create and publish message
-                    interfaces::msg::Heartbeat msg;
-                    msg.sender_id = test_node->get_name();
-                    msg.active = false;
-                    msg.time_stamp = test_node->now();
-                    msg.tick = ++test_node_tick;
+            heartbeat_counter++;
 
-                    message_publisher->publish(msg);
-                });
+            // Check that heartbeat was accepted by mission control
+            // (except for the first run, as no heartbeat was received
+            // before)
+            if (heartbeat_counter >= 2) {
+                auto &hb = mission_control_node
+                               ->node_map[common_lib::node_names::WAYPOINT]
+                               .hb_payload;
 
-        rclcpp::TimerBase::SharedPtr end_timer =
-            mission_control_node->create_wall_timer(
-                std::chrono::milliseconds(100),
-                [mission_control_node, &message_publisher, &executor]() {
-                    RCLCPP_DEBUG(mission_control_node->get_logger(),
-                                 "Ending test");
+                ASSERT_TRUE(hb.received);
 
-                    executor.cancel();
-                });
+                hb.received = false;
+            }
 
-        executor.add_node(mission_control_node);
-        executor.add_node(test_node);
+            // Create and publish message
+            interfaces::msg::Heartbeat msg;
+            msg.sender_id = test_node->get_name();
+            msg.active = true;
+            msg.time_stamp = test_node->now();
+            msg.tick = ++test_node_heartbeat_tick;
 
-        executor.spin();
-    }
+            message_publisher->publish(msg);
+        });
+
+    rclcpp::TimerBase::SharedPtr end_timer =
+        mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(
+                MissionControl::probation_period_length_ms - 5),
+            [mission_control_node, &message_publisher, &executor]() {
+                RCLCPP_DEBUG(mission_control_node->get_logger(),
+                             "Ending test before probation period ends");
+
+                executor.cancel();
+            });
+
+    executor.add_node(mission_control_node);
+    executor.add_node(test_node);
+
+    executor.spin();
+}
+
+// Test with node being inactive even though it shouldn't be
+{
+    rclcpp::executors::SingleThreadedExecutor executor;
+
+    std::shared_ptr<MissionControl> mission_control_node =
+        std::make_shared<MissionControl>(default_options);
+
+    // Deactivate event loop so it doesn't mess with our test
+    mission_control_node->event_loop_active = false;
+
+    // Set active node id and trigger probation period
+    mission_control_node->set_active_node_id(common_lib::node_names::WAYPOINT);
+
+    size_t heartbeat_counter = 0;
+
+    // Create test node
+    std::shared_ptr<rclcpp::Node> test_node =
+        std::make_shared<rclcpp::Node>(common_lib::node_names::WAYPOINT);
+
+    uint32_t test_node_heartbeat_tick = 0;
+
+    const auto message_publisher =
+        test_node->create_publisher<interfaces::msg::Heartbeat>(
+            common_lib::topic_names::Heartbeat, 10);
+
+    rclcpp::TimerBase::SharedPtr trigger_timer = test_node->create_wall_timer(
+        std::chrono::milliseconds(5),
+        [test_node, mission_control_node, &message_publisher,
+         &test_node_heartbeat_tick, &heartbeat_counter]() {
+            RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+            heartbeat_counter++;
+
+            // Check that heartbeat was accepted by mission control
+            // (except for the first run, as no heartbeat was received
+            // before)
+            if (heartbeat_counter >= 2) {
+                auto &hb = mission_control_node
+                               ->node_map[common_lib::node_names::WAYPOINT]
+                               .hb_payload;
+
+                ASSERT_TRUE(hb.received);
+
+                hb.received = false;
+            }
+
+            // Create and publish message
+            interfaces::msg::Heartbeat msg;
+            msg.sender_id = test_node->get_name();
+            msg.active = false;
+            msg.time_stamp = test_node->now();
+            msg.tick = ++test_node_heartbeat_tick;
+
+            message_publisher->publish(msg);
+        });
+
+    rclcpp::TimerBase::SharedPtr end_timer =
+        mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(
+                MissionControl::probation_period_length_ms - 5),
+            [mission_control_node, &message_publisher, &executor]() {
+                RCLCPP_DEBUG(mission_control_node->get_logger(),
+                             "Ending test before probation period ends");
+
+                executor.cancel();
+            });
+
+    executor.add_node(mission_control_node);
+    executor.add_node(test_node);
+
+    executor.spin();
+}
+}
+
+// Test fcc bridge active states
+{// Test 'selfcheck' and 'prepare_mission' states, where fcc bridge
+ // doesn't need to be active
+ {std::unordered_set<MissionControl::MissionState_t> states = {
+      MissionControl::selfcheck, MissionControl::prepare_mission};
+
+for (const auto &state : states) {
+    rclcpp::executors::SingleThreadedExecutor executor;
+
+    std::shared_ptr<MissionControl> mission_control_node =
+        std::make_shared<MissionControl>(default_options);
+
+    // Deactivate event loop so it doesn't mess with our test
+    mission_control_node->event_loop_active = false;
+
+    // Set mission state
+    mission_control_node->set_mission_state(state);
+
+    // Create test node
+    std::shared_ptr<rclcpp::Node> test_node =
+        std::make_shared<rclcpp::Node>(common_lib::node_names::FCC_BRIDGE);
+
+    uint32_t test_node_tick = 0;
+
+    const auto message_publisher =
+        test_node->create_publisher<interfaces::msg::Heartbeat>(
+            common_lib::topic_names::Heartbeat, 10);
+
+    rclcpp::TimerBase::SharedPtr trigger_timer = test_node->create_wall_timer(
+        std::chrono::milliseconds(10),
+        [test_node, &message_publisher, &test_node_tick]() {
+            RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+            // Create and publish message
+            interfaces::msg::Heartbeat msg;
+            msg.sender_id = test_node->get_name();
+            msg.active = false;
+            msg.time_stamp = test_node->now();
+            msg.tick = ++test_node_tick;
+
+            message_publisher->publish(msg);
+        });
+
+    rclcpp::TimerBase::SharedPtr end_timer =
+        mission_control_node->create_wall_timer(
+            std::chrono::milliseconds(100),
+            [mission_control_node, &message_publisher, &executor]() {
+                RCLCPP_DEBUG(mission_control_node->get_logger(), "Ending test");
+
+                executor.cancel();
+            });
+
+    executor.add_node(mission_control_node);
+    executor.add_node(test_node);
+
+    executor.spin();
+}
 }
 
 // Test the other states, where fcc bridge
-// must to be active
+// must be active
 {
     std::unordered_set<MissionControl::MissionState_t> states = {
         MissionControl::check_drone_configuration,
