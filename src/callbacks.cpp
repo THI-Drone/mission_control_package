@@ -401,6 +401,7 @@ void MissionControl::heartbeat_callback(const interfaces::msg::Heartbeat &msg) {
                      "MissionControl::%s: Received too old "
                      "timestamp from: %s",
                      __func__, msg.sender_id.c_str());
+
         mission_abort(
             "MissionControl::" + (std::string) __func__ +
             ": Received too old timestamp in heartbeat message from '" +
