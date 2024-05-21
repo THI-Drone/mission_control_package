@@ -195,11 +195,11 @@ void MissionControl::waypoint_command_callback(
                          "MissionControl::%s: Received too "
                          "old timestamp in waypoint command message from '%s' "
                          "that is currently not allowed to send. "
-                         "Currently allowed node: '%s'",
+                         "Currently allowed node: '%s'. Ignoring message.",
                          __func__, msg.sender_id.c_str(),
                          get_active_node_id().c_str());
 
-            // Deactivate node to be sure that it is not accidentaly still
+            // Deactivate node to be sure that it is not accidentally still
             // active
             send_control_json(msg.sender_id, false, {});
 
