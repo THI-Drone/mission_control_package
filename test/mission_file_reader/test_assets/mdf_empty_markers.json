@@ -1,0 +1,29 @@
+{
+   "safety": {
+      "geofence": [
+         {
+            "lat": 48.768466,
+            "lon": 11.336380
+         },
+         {
+            "lat": 48.768175,
+            "lon": 11.337411
+         },
+         {
+            "lat": 48.768187,
+            "lon": 11.336225
+         },
+         {
+            "lat": 48.767764,
+            "lon": 11.337214
+         }
+      ],
+      "max_height_cm": 5000,
+      "min_cruise_height_cm": 500,
+      "max_horizontal_speed_mps": 10.0,
+      "max_vertical_speed_mps": 2.5,
+      "min_soc_percent": 30
+   },
+   "markers": {
+   }
+}

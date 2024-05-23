@@ -1,0 +1,94 @@
+{
+   "safety": {
+      "geofence": [
+         {
+            "lat": 48.768466,
+            "lon": 11.336380
+         },
+         {
+            "lat": 48.768175,
+            "lon": 11.337411
+         },
+         {
+            "lat": 48.768187,
+            "lon": 11.336225
+         },
+         {
+            "lat": 48.767764,
+            "lon": 11.337214
+         },
+         {
+            "lat": 48.767764,
+            "lon": 11.337214
+         }
+      ],
+      "max_height_cm": 5000,
+      "min_cruise_height_cm": 500,
+      "max_horizontal_speed_mps": 10.0,
+      "max_vertical_speed_mps": 2.5,
+      "min_soc_percent": 30
+   },
+   "markers": {
+      "init": [
+         {
+            "type": "waypoint",
+            "data": {
+               "target_coordinate_lat": 48.768158,
+               "target_coordinate_lon": 11.336879,
+               "pre_wait_time_ms": 0,
+               "post_wait_time_ms": 100,
+               "cruise_height_cm": 2000,
+               "target_height_cm": 500,
+               "horizontal_speed_mps": 3.0,
+               "vertical_speed_mps": 1.0
+            }
+         },
+         {
+            "type": "waypoint",
+            "data": {
+               "target_coordinate_lat": 48.768175,
+               "target_coordinate_lon": 11.336760,
+               "pre_wait_time_ms": 100,
+               "post_wait_time_ms": 200,
+               "cruise_height_cm": 2000,
+               "target_height_cm": 500,
+               "horizontal_speed_mps": 3.0,
+               "vertical_speed_mps": 1.0
+            }
+         },
+         {
+            "type": "detect_marker",
+            "data": {
+               "timeout_ms": 30000
+            }
+         }
+      ],
+      "1": [
+         {
+            "type": "waypoint",
+            "data": {
+               "target_coordinate_lat": 48.768004,
+               "target_coordinate_lon": 11.337075,
+               "pre_wait_time_ms": 0,
+               "post_wait_time_ms": 0,
+               "cruise_height_cm": 2000,
+               "target_height_cm": 500,
+               "horizontal_speed_mps": 3.0,
+               "vertical_speed_mps": 1.0
+            }
+         },
+         {
+            "type": "detect_marker",
+            "data": {
+               "timeout_ms": 30000
+            }
+         }
+      ],
+      "2": [
+         {
+            "type": "end_mission",
+            "data": {}
+         }
+      ]
+   }
+}
