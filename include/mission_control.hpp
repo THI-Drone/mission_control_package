@@ -194,8 +194,8 @@ class MissionControl : public common_lib::CommonNode {
     static constexpr uint32_t heartbeat_period_ms =
         500;  //!< Heartbeat period in ms
     static constexpr uint32_t heartbeat_max_timestamp_age_ms =
-        100;  //!< Maximum allowed time difference between timestamp in heartbeat
-             //!< message and current time
+        100;  //!< Maximum allowed time difference between timestamp in
+              //!< heartbeat message and current time
     bool heartbeat_received_all =
         false;  //!< true if all heartbeats we're received in the last
                 //!< timeframe and the nodes are in there correct states,
