@@ -661,8 +661,8 @@ void MissionControl::health_callback(const interfaces::msg::UAVHealth &msg) {
 
     RCLCPP_DEBUG(
         this->get_logger(),
-        "MissionControl::%s: Received flight "
-        "state from '%s': GYRO: %d, ACCEL: %d, MAGN: %d, LOCALPOS: "
+        "MissionControl::%s: Received health "
+        "message from '%s': GYRO: %d, ACCEL: %d, MAGN: %d, LOCALPOS: "
         "%d, GLOBALPOS: %d, HOMEPOS: %d, ARMABLE: %d",
         __func__, msg.sender_id.c_str(), msg.is_gyrometer_calibration_ok,
         msg.is_accelerometer_calibration_ok, msg.is_magnetometer_calibration_ok,
