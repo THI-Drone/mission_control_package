@@ -1,0 +1,16 @@
+[run]
+data_file = ./coverage
+[report]
+omit = 
+    *__init__*
+    *test*
+    *tests*
+    *setup*
+exclude_lines =
+    pragma: no cover
+    @abstract
+    @abstractmethod
+    @abc.abstractmethod
+    raise NotImplementedError
+    unittest.main()
+ignore_errors = True
