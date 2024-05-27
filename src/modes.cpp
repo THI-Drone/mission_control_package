@@ -148,7 +148,6 @@ void MissionControl::mode_self_check() {
  * 1. Check if position is inside of geofence.
  * 2. Check that drone is on the ground.
  * 3. Check that the drone health is good.
- * 4. Check that the current flight mode is `HOLD`.
  *
  * @note Aborts after 60s if not all conditions were met. After performing the
  * checks, the mission state is set to `armed`.
@@ -174,8 +173,6 @@ void MissionControl::mode_check_drone_configuration() {
         if (!drone_health_ok) missing_conditions.push_back("drone health");
         if (current_landed_state != interfaces::msg::LandedState::ON_GROUND)
             missing_conditions.push_back("landed state 'ON_GROUND'");
-        if (current_flight_mode != interfaces::msg::FlightMode::HOLD)
-            missing_conditions.push_back("flight mode 'HOLD'");
 
         std::string missing_conditions_str = "";
         {
@@ -220,11 +217,9 @@ void MissionControl::mode_check_drone_configuration() {
                       "timeframe");
     }
 
-    // Check that drone health is good, FCC is in 'HOLD' state, and drone is on
-    // the ground
+    // Check that drone health is good, and drone is on the ground
     if (drone_health_ok &&
-        current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
-        current_flight_mode == interfaces::msg::FlightMode::HOLD) {
+        current_landed_state == interfaces::msg::LandedState::ON_GROUND) {
         // Check that current position is in geofence
         try {
             if (!mission_definition_reader.check_in_geofence(
