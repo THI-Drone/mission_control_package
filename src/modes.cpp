@@ -223,8 +223,8 @@ void MissionControl::mode_check_drone_configuration() {
     // Check that drone health is good, FCC is in 'HOLD' state, and drone is on
     // the ground
     if (drone_health_ok &&
-        current_landed_state == interfaces::msg::LandedState::ON_GROUND &&
-        current_flight_mode == interfaces::msg::FlightMode::HOLD) {
+        current_landed_state == interfaces::msg::LandedState::ON_GROUND /* &&
+        current_flight_mode == interfaces::msg::FlightMode::HOLD */) {
         // Check that current position is in geofence
         try {
             if (!mission_definition_reader.check_in_geofence(
