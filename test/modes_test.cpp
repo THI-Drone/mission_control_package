@@ -735,6 +735,12 @@ TEST(mission_control_package, mode_decision_maker_test) {
         "../../src/mission_control_package/test/mission_file_reader/"
         "test_assets/mdf_correct.json");
 
+    rclcpp::NodeOptions default_options_2;
+    default_options_2.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct_set_marker.json");
+
     // Test with active marker 'init'
     {
         MissionControl mission_control(default_options);
@@ -772,7 +778,7 @@ TEST(mission_control_package, mode_decision_maker_test) {
         ASSERT_DEATH({ mission_control.mode_decision_maker(); }, ".*");
     }
 
-    // Test marker change
+    // Test marker change using 'detect_marker'
     {
         MissionControl mission_control(default_options);
 
@@ -807,6 +813,69 @@ TEST(mission_control_package, mode_decision_maker_test) {
         // Change to active marker '1'
         mission_control.set_mission_state(MissionControl::decision_maker);
         mission_control.set_active_marker_name("1");
+        ASSERT_EQ("1", mission_control.get_active_marker_name());
+
+        // First round of marker '1'
+        mission_control.set_mission_state(MissionControl::decision_maker);
+        ASSERT_NO_THROW(mission_control.mode_decision_maker());
+        ASSERT_EQ(0, mission_control.current_command_id);
+        ASSERT_EQ(MissionControl::fly_to_waypoint,
+                  mission_control.get_mission_state());
+
+        // Change to active marker '2'
+        mission_control.set_mission_state(MissionControl::decision_maker);
+        mission_control.set_active_marker_name("2");
+        ASSERT_EQ("2", mission_control.get_active_marker_name());
+
+        // Second round of marker '1', as one command is still left
+        mission_control.set_mission_state(MissionControl::decision_maker);
+        ASSERT_NO_THROW(mission_control.mode_decision_maker());
+        ASSERT_EQ(1, mission_control.current_command_id);
+        ASSERT_EQ(MissionControl::detect_marker,
+                  mission_control.get_mission_state());
+
+        // First round of marker '2' -> end_mission command which means that
+        // this will exit
+        mission_control.set_mission_state(MissionControl::decision_maker);
+        ASSERT_DEATH({ mission_control.mode_decision_maker(); }, ".*");
+    }
+
+    // Test marker change using 'set_marker'
+    {
+        MissionControl mission_control(default_options_2);
+
+        // Read mission file
+        mission_control.mode_prepare_mission();
+
+        mission_control.set_mission_state(MissionControl::decision_maker);
+        ASSERT_EQ("init", mission_control.get_active_marker_name());
+        ASSERT_EQ(0, mission_control.current_command_id);
+
+        // First round of marker 'init'
+        mission_control.set_mission_state(MissionControl::decision_maker);
+        ASSERT_NO_THROW(mission_control.mode_decision_maker());
+        ASSERT_EQ(0, mission_control.current_command_id);
+        ASSERT_EQ(MissionControl::fly_to_waypoint,
+                  mission_control.get_mission_state());
+
+        // Second round of marker 'init'
+        mission_control.set_mission_state(MissionControl::decision_maker);
+        ASSERT_NO_THROW(mission_control.mode_decision_maker());
+        ASSERT_EQ(1, mission_control.current_command_id);
+        ASSERT_EQ(MissionControl::fly_to_waypoint,
+                  mission_control.get_mission_state());
+
+        // Third round of marker 'init'
+        mission_control.set_mission_state(MissionControl::decision_maker);
+        ASSERT_NO_THROW(mission_control.mode_decision_maker());
+        ASSERT_EQ(2, mission_control.current_command_id);
+        ASSERT_EQ(MissionControl::set_marker,
+                  mission_control.get_mission_state());
+
+        // Change to active marker '1'
+        ASSERT_NO_THROW(mission_control.mode_set_marker());
+        ASSERT_EQ(MissionControl::decision_maker,
+                  mission_control.get_mission_state());
         ASSERT_EQ("1", mission_control.get_active_marker_name());
 
         // First round of marker '1'
@@ -1165,5 +1234,41 @@ TEST(mission_control_package, mode_detect_marker_test) {
         mission_control_node->wait_time_finished_ok = true;
 
         ASSERT_DEATH({ mission_control_node->mode_detect_marker(); }, ".*");
+    }
+}
+
+/**
+ * @brief Test case for the mode_set_marker function in the
+ * mission_control_package.
+ *
+ * This test verifies that the mode_set_marker function correctly sets the
+ * active marker name and transitions the mission state to the decision_maker
+ * state.
+ */
+TEST(mission_control_package, mode_set_marker_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/"
+        "mission_file_reader/test_assets/mdf_correct_set_marker.json");
+
+    // Fully working set marker procedure
+    {
+        MissionControl mission_control(default_options);
+        mission_control.set_mission_state(MissionControl::set_marker);
+        ASSERT_EQ("init", mission_control.get_active_marker_name());
+        mission_control.current_command_id = 0;
+
+        mission_file_lib::command cmd;
+        cmd.type = "set_marker";
+        cmd.data = {{"marker_name", "1"}};
+        mission_control.commands.push_back(cmd);
+
+        mission_control.mode_set_marker();
+
+        ASSERT_EQ("1", mission_control.get_active_marker_name());
+
+        ASSERT_EQ(MissionControl::decision_maker,
+                  mission_control.get_mission_state());
     }
 }
