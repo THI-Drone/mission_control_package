@@ -242,7 +242,9 @@ TEST(mission_control_package, file_format_test) {
                                    true),
                      std::runtime_error);
     }
+}
 
+TEST(mission_control_package, set_marker_test) {
     {
         // Test correct json file with "set_marker" command in a
         // marker
