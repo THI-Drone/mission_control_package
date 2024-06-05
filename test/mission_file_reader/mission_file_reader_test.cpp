@@ -231,6 +231,71 @@ TEST(mission_control_package, file_format_test) {
                                    true),
                      std::runtime_error);
     }
+
+    {
+        // Test incorrect json file with "detect_marker" before a "end_mission"
+        // command in a marker
+        MissionDefinitionReader mdr;
+        ASSERT_THROW(mdr.read_file("../../src/mission_control_package/test/"
+                                   "mission_file_reader/test_assets/"
+                                   "mdf_incorrect_detect_marker.json",
+                                   true),
+                     std::runtime_error);
+    }
+
+    {
+        // Test correct json file with "set_marker" command in a
+        // marker
+        MissionDefinitionReader mdr;
+        ASSERT_NO_THROW(
+            mdr.read_file("../../src/mission_control_package/test/"
+                          "mission_file_reader/test_assets/"
+                          "mdf_correct_set_marker.json",
+                          true));
+    }
+
+    {
+        // Test incorrect json file with "set_marker" before a "end_mission"
+        // command in a marker
+        MissionDefinitionReader mdr;
+        ASSERT_THROW(mdr.read_file("../../src/mission_control_package/test/"
+                                   "mission_file_reader/test_assets/"
+                                   "mdf_incorrect_set_marker.json",
+                                   true),
+                     std::runtime_error);
+    }
+
+    {
+        // Test incorrect json file with "set_marker" and "detect_marker"
+        // commands in a marker
+        MissionDefinitionReader mdr;
+        ASSERT_THROW(mdr.read_file("../../src/mission_control_package/test/"
+                                   "mission_file_reader/test_assets/"
+                                   "mdf_incorrect_set_marker_2.json",
+                                   true),
+                     std::runtime_error);
+    }
+
+    {
+        // Test incorrect json file with "detect_marker" and "set_marker"
+        // commands in a marker
+        MissionDefinitionReader mdr;
+        ASSERT_THROW(mdr.read_file("../../src/mission_control_package/test/"
+                                   "mission_file_reader/test_assets/"
+                                   "mdf_incorrect_set_marker_3.json",
+                                   true),
+                     std::runtime_error);
+    }
+
+    {
+        // Test incorrect json file with invalid marker name in "set_marker"
+        MissionDefinitionReader mdr;
+        ASSERT_THROW(mdr.read_file("../../src/mission_control_package/test/"
+                                   "mission_file_reader/test_assets/"
+                                   "mdf_incorrect_set_marker_4.json",
+                                   true),
+                     std::runtime_error);
+    }
 }
 
 /**
