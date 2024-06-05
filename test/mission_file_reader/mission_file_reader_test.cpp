@@ -242,27 +242,17 @@ TEST(mission_control_package, file_format_test) {
                                    true),
                      std::runtime_error);
     }
-}
 
-/**
- * @brief Test case for the mission_control_package.
- *
- * This test case verifies the behavior of the `set_marker_test` function.
- * It tests various scenarios with different JSON files to ensure that the
- * `MissionDefinitionReader` correctly handles the "set_marker" command in a
- * marker.
- */
-TEST(mission_control_package, set_marker_test) {
-    // {
-    //     // Test correct json file with "set_marker" command in a
-    //     // marker
-    //     MissionDefinitionReader mdr;
-    //     ASSERT_NO_THROW(
-    //         mdr.read_file("../../src/mission_control_package/test/"
-    //                       "mission_file_reader/test_assets/"
-    //                       "mdf_correct_set_marker.json",
-    //                       true));
-    // }
+    {
+        // Test correct json file with "set_marker" command in a
+        // marker
+        MissionDefinitionReader mdr;
+        ASSERT_NO_THROW(
+            mdr.read_file("../../src/mission_control_package/test/"
+                          "mission_file_reader/test_assets/"
+                          "mdf_correct_set_marker.json",
+                          true));
+    }
 
     {
         // Test incorrect json file with "set_marker" before a "end_mission"
