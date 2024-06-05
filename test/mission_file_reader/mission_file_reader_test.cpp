@@ -244,6 +244,14 @@ TEST(mission_control_package, file_format_test) {
     }
 }
 
+/**
+ * @brief Test case for the mission_control_package.
+ *
+ * This test case verifies the behavior of the `set_marker_test` function.
+ * It tests various scenarios with different JSON files to ensure that the
+ * `MissionDefinitionReader` correctly handles the "set_marker" command in a
+ * marker.
+ */
 TEST(mission_control_package, set_marker_test) {
     {
         // Test correct json file with "set_marker" command in a
@@ -428,6 +436,126 @@ TEST(mission_control_package, file_save_test) {
 
                 const nlohmann::ordered_json json_data = {
                     {"timeout_ms", 30000}};
+
+                ASSERT_EQ(cmds.at(index).data, json_data);
+            }
+        }
+
+        {
+            std::vector<command> cmds = mdr.get_marker_commands("1");
+
+            ASSERT_EQ(cmds.size(), 2);
+
+            {
+                const size_t index = 0;
+                ASSERT_EQ(cmds.at(index).type, "waypoint");
+
+                const nlohmann::ordered_json json_data = {
+                    {"target_coordinate_lat", 48.768004},
+                    {"target_coordinate_lon", 11.337075},
+                    {"pre_wait_time_ms", 0},
+                    {"post_wait_time_ms", 0},
+                    {"cruise_height_cm", 2000},
+                    {"target_height_cm", 500},
+                    {"horizontal_speed_mps", 3.0},
+                    {"vertical_speed_mps", 1.0}};
+
+                ASSERT_EQ(cmds.at(index).data, json_data);
+            }
+
+            {
+                const size_t index = 1;
+                ASSERT_EQ(cmds.at(index).type, "detect_marker");
+
+                const nlohmann::ordered_json json_data = {
+                    {"timeout_ms", 30000}};
+
+                ASSERT_EQ(cmds.at(index).data, json_data);
+            }
+        }
+
+        {
+            std::vector<command> cmds = mdr.get_marker_commands("2");
+
+            ASSERT_EQ(cmds.size(), 1);
+
+            const size_t index = 0;
+            ASSERT_EQ(cmds.at(index).type, "end_mission");
+            ASSERT_EQ(cmds.at(index).data, nlohmann::ordered_json::parse("{}"));
+        }
+    }
+
+    // Normal mode with set_marker command
+    {
+        // Check that the geofence points were read and stored correctly
+        MissionDefinitionReader mdr;
+        ASSERT_NO_THROW(
+            mdr.read_file("../../src/mission_control_package/test/"
+                          "mission_file_reader/test_assets/"
+                          "mdf_correct_set_marker.json",
+                          false));
+
+        safety safety_settings = mdr.get_safety_settings();
+
+        const std::vector<std::array<double, 2>> geofence_points_raw = {
+            {48.768466, 11.336380},
+            {48.768175, 11.337411},
+            {48.768187, 11.336225},
+            {48.767764, 11.337214}};
+        ASSERT_EQ(safety_settings.get_geofence_points(), geofence_points_raw);
+
+        // Check the other safety settings
+        ASSERT_EQ(safety_settings.max_height_cm, 5000);
+        ASSERT_EQ(safety_settings.min_cruise_height_cm, 500);
+        ASSERT_EQ(safety_settings.max_horizontal_speed_mps, 10.0);
+        ASSERT_EQ(safety_settings.max_vertical_speed_mps, 2.5);
+        ASSERT_EQ(safety_settings.min_soc_percent, 30);
+
+        // Checking markers
+        {
+            std::vector<command> cmds = mdr.get_marker_commands("init");
+
+            ASSERT_EQ(cmds.size(), 3);
+
+            {
+                const size_t index = 0;
+                ASSERT_EQ(cmds.at(index).type, "waypoint");
+
+                const nlohmann::ordered_json json_data = {
+                    {"target_coordinate_lat", 48.768158},
+                    {"target_coordinate_lon", 11.336879},
+                    {"pre_wait_time_ms", 0},
+                    {"post_wait_time_ms", 100},
+                    {"cruise_height_cm", 2000},
+                    {"target_height_cm", 500},
+                    {"horizontal_speed_mps", 3.0},
+                    {"vertical_speed_mps", 1.0}};
+
+                ASSERT_EQ(cmds.at(index).data, json_data);
+            }
+
+            {
+                const size_t index = 1;
+                ASSERT_EQ(cmds.at(index).type, "waypoint");
+
+                const nlohmann::ordered_json json_data = {
+                    {"target_coordinate_lat", 48.768175},
+                    {"target_coordinate_lon", 11.336760},
+                    {"pre_wait_time_ms", 100},
+                    {"post_wait_time_ms", 200},
+                    {"cruise_height_cm", 2000},
+                    {"target_height_cm", 500},
+                    {"horizontal_speed_mps", 3.0},
+                    {"vertical_speed_mps", 1.0}};
+
+                ASSERT_EQ(cmds.at(index).data, json_data);
+            }
+
+            {
+                const size_t index = 2;
+                ASSERT_EQ(cmds.at(index).type, "set_marker");
+
+                const nlohmann::ordered_json json_data = {{"marker_name", "1"}};
 
                 ASSERT_EQ(cmds.at(index).data, json_data);
             }
