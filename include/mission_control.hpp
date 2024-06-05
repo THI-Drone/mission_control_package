@@ -57,6 +57,7 @@ class MissionControl : public common_lib::CommonNode {
         decision_maker,
         fly_to_waypoint,
         detect_marker,
+        set_marker,
     } MissionState_t;
 
     // General
@@ -290,6 +291,7 @@ class MissionControl : public common_lib::CommonNode {
     virtual void mode_decision_maker();
     virtual void mode_fly_to_waypoint();
     virtual void mode_detect_marker();
+    virtual void mode_set_marker();
 
     // Job finished
     void job_finished_callback(const interfaces::msg::JobFinished &msg);

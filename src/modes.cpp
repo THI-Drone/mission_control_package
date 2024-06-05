@@ -477,6 +477,8 @@ void MissionControl::mode_decision_maker() {
         set_mission_state(fly_to_waypoint);
     else if (current_command_type == "detect_marker")
         set_mission_state(detect_marker);
+    else if (current_command_type == "set_marker")
+        set_mission_state(set_marker);
     else if (current_command_type == "end_mission")
         mission_finished();
     else
@@ -650,4 +652,29 @@ void MissionControl::mode_detect_marker() {
                     __func__, get_mission_state_str(decision_maker));
         set_mission_state(decision_maker);
     }
+}
+
+/**
+ * @brief Sets the active marker
+ *
+ * It retrieves the new marker name from the current command and sets it as the
+ * active marker.
+ */
+void MissionControl::mode_set_marker() {
+    // Deactivate Event Loop as it is not needed for set marker
+    EventLoopGuard elg(&event_loop_active, false);
+
+    // Set new active marker
+    const std::string new_marker_name = commands.at(current_command_id)
+                                            .data.at("marker_name")
+                                            .get<std::string>();
+    set_active_marker_name(new_marker_name);
+
+    // Set mission state to 'decision_maker'
+    RCLCPP_INFO(this->get_logger(),
+                "MissionControl::%s: New marker name '%s' set. Set mission "
+                "state to '%s'.",
+                __func__, get_active_marker_name().c_str(),
+                get_mission_state_str(decision_maker));
+    set_mission_state(decision_maker);
 }

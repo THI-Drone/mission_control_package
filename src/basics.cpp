@@ -302,6 +302,7 @@ const char* MissionControl::get_mission_state_str(
         ENUM_TO_STR(decision_maker);
         ENUM_TO_STR(fly_to_waypoint);
         ENUM_TO_STR(detect_marker);
+        ENUM_TO_STR(set_marker);
         default:
             throw std::runtime_error(
                 "MissionControl::" + (std::string) __func__ +
