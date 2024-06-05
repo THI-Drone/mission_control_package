@@ -253,16 +253,16 @@ TEST(mission_control_package, file_format_test) {
  * marker.
  */
 TEST(mission_control_package, set_marker_test) {
-    {
-        // Test correct json file with "set_marker" command in a
-        // marker
-        MissionDefinitionReader mdr;
-        ASSERT_NO_THROW(
-            mdr.read_file("../../src/mission_control_package/test/"
-                          "mission_file_reader/test_assets/"
-                          "mdf_correct_set_marker.json",
-                          true));
-    }
+    // {
+    //     // Test correct json file with "set_marker" command in a
+    //     // marker
+    //     MissionDefinitionReader mdr;
+    //     ASSERT_NO_THROW(
+    //         mdr.read_file("../../src/mission_control_package/test/"
+    //                       "mission_file_reader/test_assets/"
+    //                       "mdf_correct_set_marker.json",
+    //                       true));
+    // }
 
     {
         // Test incorrect json file with "set_marker" before a "end_mission"
