@@ -1529,3 +1529,138 @@ executor.spin();
     ASSERT_DEATH({ executor.spin(); }, ".*");
 }
 }
+
+TEST(mission_control_package, heartbeat_timer_callback_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test valid heartbeats
+    {
+        MissionControl mission_control_node(default_options);
+
+        ASSERT_FALSE(mission_control_node.heartbeat_received_all);
+
+        for (auto &node : mission_control_node.node_map) {
+            node.second.hb_payload.received = true;
+
+            if (node.second.is_fcc_bridge) {
+                node.second.hb_payload.active = true;
+            }
+        }
+
+        mission_control_node.heartbeat_timer_callback();
+
+        ASSERT_TRUE(mission_control_node.heartbeat_received_all);
+
+        // Check that heartbeat received flags are turned off again
+        for (auto &node : mission_control_node.node_map) {
+            ASSERT_FALSE(node.second.hb_payload.received);
+        }
+    }
+
+    // Test fcc bridge not active in selfcheck state
+    {
+        MissionControl mission_control_node(default_options);
+
+        mission_control_node.heartbeat_received_all = true;
+
+        for (auto &node : mission_control_node.node_map) {
+            node.second.hb_payload.received = true;
+        }
+
+        mission_control_node.heartbeat_timer_callback();
+
+        ASSERT_FALSE(mission_control_node.heartbeat_received_all);
+
+        // Check that heartbeat received flags are turned off again
+        for (auto &node : mission_control_node.node_map) {
+            ASSERT_FALSE(node.second.hb_payload.received);
+        }
+    }
+
+    // Test fcc bridge not active in takeoff state
+    {
+        MissionControl mission_control_node(default_options);
+        mission_control_node.set_mission_state(MissionControl::takeoff);
+
+        mission_control_node.heartbeat_received_all = true;
+
+        for (auto &node : mission_control_node.node_map) {
+            node.second.hb_payload.received = true;
+        }
+
+        ASSERT_DEATH({ mission_control_node.heartbeat_timer_callback(); },
+                     ".*");
+    }
+
+    // Test waypoint node heartbeat not received while in selfcheck state
+    {
+        MissionControl mission_control_node(default_options);
+
+        mission_control_node.heartbeat_received_all = true;
+
+        for (auto &node : mission_control_node.node_map) {
+            node.second.hb_payload.received = true;
+
+            if (node.second.is_fcc_bridge) {
+                node.second.hb_payload.active = true;
+            }
+        }
+
+        mission_control_node.node_map[common_lib::node_names::WAYPOINT]
+            .hb_payload.received = false;
+
+        mission_control_node.heartbeat_timer_callback();
+
+        ASSERT_FALSE(mission_control_node.heartbeat_received_all);
+
+        // Check that heartbeat received flags are turned off again
+        for (auto &node : mission_control_node.node_map) {
+            ASSERT_FALSE(node.second.hb_payload.received);
+        }
+    }
+
+    // Test waypoint node heartbeat not received while in takeoff state
+    {
+        MissionControl mission_control_node(default_options);
+        mission_control_node.set_mission_state(MissionControl::takeoff);
+
+        mission_control_node.heartbeat_received_all = true;
+
+        for (auto &node : mission_control_node.node_map) {
+            node.second.hb_payload.received = true;
+
+            if (node.second.is_fcc_bridge) {
+                node.second.hb_payload.active = true;
+            }
+        }
+
+        mission_control_node.node_map[common_lib::node_names::WAYPOINT]
+            .hb_payload.received = false;
+
+        ASSERT_DEATH({ mission_control_node.heartbeat_timer_callback(); },
+                     ".*");
+    }
+
+    // Test all heartbeats not received while in selfcheck state
+    {
+        MissionControl mission_control_node(default_options);
+        mission_control_node.heartbeat_received_all = true;
+
+        mission_control_node.heartbeat_timer_callback();
+
+        ASSERT_FALSE(mission_control_node.heartbeat_received_all);
+    }
+
+    // Test all heartbeats not received while in takeoff state
+    {
+        MissionControl mission_control_node(default_options);
+        mission_control_node.set_mission_state(MissionControl::takeoff);
+
+        ASSERT_DEATH({ mission_control_node.heartbeat_timer_callback(); },
+                     ".*");
+    }
+}
