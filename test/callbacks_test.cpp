@@ -27,6 +27,7 @@
 #include "interfaces/msg/mission_progress.hpp"
 #include "interfaces/msg/mission_start.hpp"
 #include "interfaces/msg/uav_command.hpp"
+#include "interfaces/msg/uav_health.hpp"
 #include "interfaces/msg/uav_waypoint_command.hpp"
 
 /**
@@ -2168,6 +2169,233 @@ TEST(mission_control_package, flight_state_callback_test) {
 
                     ASSERT_EQ(interfaces::msg::LandedState::UNKNOWN,
                               mission_control_node->current_landed_state);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+}
+
+/**
+ * @brief Test case for the `mission_control_package` health callback.
+ *
+ * This test case verifies the behavior of the health callback in the
+ * `mission_control_package`. It tests various scenarios by publishing different
+ * health messages and checking the resulting drone health status.
+ */
+TEST(mission_control_package, health_callback_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test valid health message with all flags set to true
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Check that drone health is not ok on init
+        ASSERT_FALSE(mission_control_node->drone_health_ok);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVHealth>(
+                common_lib::topic_names::UAVHealth, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVHealth msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+                    msg.is_gyrometer_calibration_ok = true;
+                    msg.is_accelerometer_calibration_ok = true;
+                    msg.is_magnetometer_calibration_ok = true;
+                    msg.is_local_position_ok = true;
+                    msg.is_global_position_ok = true;
+                    msg.is_home_position_ok = true;
+                    msg.is_armable = true;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    ASSERT_TRUE(mission_control_node->drone_health_ok);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test health message with invalid timestamp
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Check that drone health is not ok on init
+        ASSERT_FALSE(mission_control_node->drone_health_ok);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVHealth>(
+                common_lib::topic_names::UAVHealth, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVHealth msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.is_gyrometer_calibration_ok = true;
+                    msg.is_accelerometer_calibration_ok = true;
+                    msg.is_magnetometer_calibration_ok = true;
+                    msg.is_local_position_ok = true;
+                    msg.is_global_position_ok = true;
+                    msg.is_home_position_ok = true;
+                    msg.is_armable = true;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    ASSERT_FALSE(mission_control_node->drone_health_ok);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test health message with one flag set to false and all set to false
+    for (size_t unavail_flag = 0; unavail_flag < 8; unavail_flag++) {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Check that drone health is not ok on init
+        ASSERT_FALSE(mission_control_node->drone_health_ok);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVHealth>(
+                common_lib::topic_names::UAVHealth, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher, &unavail_flag]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVHealth msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+                    msg.is_gyrometer_calibration_ok = true;
+                    msg.is_accelerometer_calibration_ok = true;
+                    msg.is_magnetometer_calibration_ok = true;
+                    msg.is_local_position_ok = true;
+                    msg.is_global_position_ok = true;
+                    msg.is_home_position_ok = true;
+                    msg.is_armable = true;
+
+                    switch (unavail_flag) {
+                        case 0:
+                            msg.is_gyrometer_calibration_ok = false;
+                            break;
+                        case 1:
+                            msg.is_accelerometer_calibration_ok = false;
+                            break;
+                        case 2:
+                            msg.is_magnetometer_calibration_ok = false;
+                            break;
+                        case 3:
+                            msg.is_local_position_ok = false;
+                            break;
+                        case 4:
+                            msg.is_global_position_ok = false;
+                            break;
+                        case 5:
+                            msg.is_home_position_ok = false;
+                            break;
+                        case 6:
+                            msg.is_armable = false;
+                            break;
+                        case 7:
+                            msg.is_gyrometer_calibration_ok = false;
+                            msg.is_accelerometer_calibration_ok = false;
+                            msg.is_magnetometer_calibration_ok = false;
+                            msg.is_local_position_ok = false;
+                            msg.is_global_position_ok = false;
+                            msg.is_home_position_ok = false;
+                            msg.is_armable = false;
+                            break;
+                    }
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    ASSERT_FALSE(mission_control_node->drone_health_ok);
 
                     executor.cancel();
                 });
