@@ -21,6 +21,7 @@
 #include "interfaces/msg/gps_position.hpp"
 #include "interfaces/msg/heartbeat.hpp"
 #include "interfaces/msg/job_finished.hpp"
+#include "interfaces/msg/mission_progress.hpp"
 #include "interfaces/msg/mission_start.hpp"
 #include "interfaces/msg/uav_command.hpp"
 #include "interfaces/msg/uav_waypoint_command.hpp"
@@ -1861,5 +1862,168 @@ TEST(mission_control_package, position_callback_test) {
         executor.add_node(test_node);
 
         ASSERT_DEATH({ executor.spin(); }, ".*");
+    }
+}
+
+/**
+ * @brief Test case for the mission_progress_callback_test.
+ *
+ * This test case verifies the behavior of the mission_progress_callback_test
+ * function. It tests the mission progress message with a valid timestamp and an
+ * invalid timestamp. The test creates a mission control node and a test node,
+ * and publishes mission progress messages. It checks if the mission progress
+ * counter is updated correctly and asserts that the mission progress is
+ * increasing.
+ */
+TEST(mission_control_package, mission_progress_callback_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test valid mission progress message
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Explicitly set mission progress to 0
+        mission_control_node->mission_progress = 0.0;
+
+        float mission_progress_counter = 0.0;
+        float last_mission_progress_counter = 0.0;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::MissionProgress>(
+                common_lib::topic_names::MissionProgress, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(50),
+                [test_node, &message_publisher, &mission_progress_counter]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    if (mission_progress_counter < 1.0) {
+                        mission_progress_counter += 0.2;
+                    }
+
+                    // Create and publish message
+                    interfaces::msg::MissionProgress msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+                    msg.progress = mission_progress_counter;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr check_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [mission_control_node, &last_mission_progress_counter]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Checking progress counter");
+
+                    ASSERT_GE(mission_control_node->mission_progress,
+                              last_mission_progress_counter);
+
+                    last_mission_progress_counter =
+                        mission_control_node->mission_progress;
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(300),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test mission progress message with invalid timestamp
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Explicitly set mission progress to 0
+        mission_control_node->mission_progress = 0.0;
+
+        float mission_progress_counter = 0.0;
+        float last_mission_progress_counter = 0.0;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::MissionProgress>(
+                common_lib::topic_names::MissionProgress, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(50),
+                [test_node, &message_publisher, &mission_progress_counter]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    if (mission_progress_counter < 1.0) {
+                        mission_progress_counter += 0.2;
+                    }
+
+                    // Create and publish message
+                    interfaces::msg::MissionProgress msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.progress = mission_progress_counter;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr check_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [mission_control_node, &last_mission_progress_counter]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Checking progress counter");
+
+                    ASSERT_GE(mission_control_node->mission_progress,
+                              last_mission_progress_counter);
+
+                    last_mission_progress_counter =
+                        mission_control_node->mission_progress;
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(300),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
     }
 }
