@@ -18,9 +18,12 @@
 #include "structs.hpp"
 
 // Message includes
+#include "interfaces/msg/flight_mode.hpp"
+#include "interfaces/msg/flight_state.hpp"
 #include "interfaces/msg/gps_position.hpp"
 #include "interfaces/msg/heartbeat.hpp"
 #include "interfaces/msg/job_finished.hpp"
+#include "interfaces/msg/landed_state.hpp"
 #include "interfaces/msg/mission_progress.hpp"
 #include "interfaces/msg/mission_start.hpp"
 #include "interfaces/msg/uav_command.hpp"
@@ -2017,6 +2020,154 @@ TEST(mission_control_package, mission_progress_callback_test) {
                 [mission_control_node, &executor]() {
                     RCLCPP_DEBUG(mission_control_node->get_logger(),
                                  "Ending test");
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+}
+
+/**
+ * @brief Test case for the flight_state_callback_test.
+ *
+ * This test case verifies the behavior of the flight_state_callback_test
+ * function. It tests the handling of valid and invalid flight state messages by
+ * the MissionControl class. The test creates a test node that publishes flight
+ * state messages and checks if the MissionControl class correctly handles the
+ * messages and updates its internal state variables.
+ */
+TEST(mission_control_package, flight_state_callback_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test valid flight state message
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::FlightState>(
+                common_lib::topic_names::FlightState, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::FlightState msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+
+                    interfaces::msg::FlightMode flight_mode_msg;
+                    flight_mode_msg.mode = interfaces::msg::FlightMode::HOLD;
+
+                    interfaces::msg::LandedState landed_state_msg;
+                    landed_state_msg.state =
+                        interfaces::msg::LandedState::ON_GROUND;
+
+                    msg.mode = flight_mode_msg;
+                    msg.state = landed_state_msg;
+
+                    msg.armed = false;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    ASSERT_EQ(interfaces::msg::FlightMode::HOLD,
+                              mission_control_node->current_flight_mode);
+
+                    ASSERT_EQ(interfaces::msg::LandedState::ON_GROUND,
+                              mission_control_node->current_landed_state);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test flight state message with invalid timestamp
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::FlightState>(
+                common_lib::topic_names::FlightState, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::FlightState msg;
+                    msg.sender_id = test_node->get_name();
+
+                    interfaces::msg::FlightMode flight_mode_msg;
+                    flight_mode_msg.mode = interfaces::msg::FlightMode::HOLD;
+
+                    interfaces::msg::LandedState landed_state_msg;
+                    landed_state_msg.state =
+                        interfaces::msg::LandedState::ON_GROUND;
+
+                    msg.mode = flight_mode_msg;
+                    msg.state = landed_state_msg;
+
+                    msg.armed = false;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    ASSERT_EQ(interfaces::msg::FlightMode::UNKNOWN,
+                              mission_control_node->current_flight_mode);
+
+                    ASSERT_EQ(interfaces::msg::LandedState::UNKNOWN,
+                              mission_control_node->current_landed_state);
 
                     executor.cancel();
                 });
