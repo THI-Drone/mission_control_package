@@ -1530,6 +1530,14 @@ executor.spin();
 }
 }
 
+/**
+ * @brief Test case for the `heartbeat_timer_callback` function in the
+ * `mission_control_package`.
+ *
+ * This test case verifies the behavior of the `heartbeat_timer_callback`
+ * function in the `mission_control_package`. It tests various scenarios related
+ * to heartbeat reception and mission state.
+ */
 TEST(mission_control_package, heartbeat_timer_callback_test) {
     rclcpp::NodeOptions default_options;
     default_options.append_parameter_override(
