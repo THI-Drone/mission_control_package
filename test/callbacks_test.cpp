@@ -18,6 +18,7 @@
 #include "structs.hpp"
 
 // Message includes
+#include "interfaces/msg/gps_position.hpp"
 #include "interfaces/msg/heartbeat.hpp"
 #include "interfaces/msg/job_finished.hpp"
 #include "interfaces/msg/mission_start.hpp"
@@ -1670,5 +1671,195 @@ TEST(mission_control_package, heartbeat_timer_callback_test) {
 
         ASSERT_DEATH({ mission_control_node.heartbeat_timer_callback(); },
                      ".*");
+    }
+}
+
+/**
+ * @brief Test case for the `mission_control_package` position callback.
+ *
+ * This test case verifies the behavior of the position callback in the
+ * `mission_control_package`. It tests the handling of valid position messages,
+ * position messages with too old timestamps while not being 'active', and
+ * position messages with too old timestamps while being 'active'.
+ */
+TEST(mission_control_package, position_callback_test) {
+    class OpenMissionControl : public MissionControl {
+       public:
+        OpenMissionControl(const rclcpp::NodeOptions &options)
+            : MissionControl(options) {}
+
+        void open_deactivate() { deactivate(); }
+
+        void open_activate() { activate(); }
+    };
+
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test valid position message
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::GPSPosition>(
+                common_lib::topic_names::GPSPosition, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::GPSPosition msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+                    msg.latitude_deg = 1.234;
+                    msg.longitude_deg = 4.321;
+                    msg.relative_altitude_m = 10.1;
+                    msg.fix_type = interfaces::msg::GPSPosition::FIX_3D;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &message_publisher, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    const Position &pos =
+                        mission_control_node->current_position;
+
+                    ASSERT_EQ(1.234, pos.coordinate_lat);
+                    ASSERT_EQ(4.321, pos.coordinate_lon);
+                    ASSERT_EQ(1010, pos.height_cm);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test position message with too old timestamp while not being 'active'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<OpenMissionControl> mission_control_node =
+            std::make_shared<OpenMissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Deactivate Mission Control
+        mission_control_node->open_deactivate();
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::GPSPosition>(
+                common_lib::topic_names::GPSPosition, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::GPSPosition msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.latitude_deg = 1.234;
+                    msg.longitude_deg = 4.321;
+                    msg.relative_altitude_m = 10.1;
+                    msg.fix_type = interfaces::msg::GPSPosition::FIX_3D;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &message_publisher, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    const Position &pos =
+                        mission_control_node->current_position;
+
+                    ASSERT_EQ(1.234, pos.coordinate_lat);
+                    ASSERT_EQ(4.321, pos.coordinate_lon);
+                    ASSERT_EQ(1010, pos.height_cm);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test position message with too old timestamp while being 'active'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<OpenMissionControl> mission_control_node =
+            std::make_shared<OpenMissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Deactivate Mission Control
+        mission_control_node->open_activate();
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::GPSPosition>(
+                common_lib::topic_names::GPSPosition, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::GPSPosition msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.latitude_deg = 1.234;
+                    msg.longitude_deg = 4.321;
+                    msg.relative_altitude_m = 10.1;
+                    msg.fix_type = interfaces::msg::GPSPosition::FIX_3D;
+
+                    message_publisher->publish(msg);
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        ASSERT_DEATH({ executor.spin(); }, ".*");
     }
 }
