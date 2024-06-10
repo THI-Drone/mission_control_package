@@ -18,10 +18,16 @@
 #include "structs.hpp"
 
 // Message includes
+#include "interfaces/msg/flight_mode.hpp"
+#include "interfaces/msg/flight_state.hpp"
+#include "interfaces/msg/gps_position.hpp"
 #include "interfaces/msg/heartbeat.hpp"
 #include "interfaces/msg/job_finished.hpp"
+#include "interfaces/msg/landed_state.hpp"
+#include "interfaces/msg/mission_progress.hpp"
 #include "interfaces/msg/mission_start.hpp"
 #include "interfaces/msg/uav_command.hpp"
+#include "interfaces/msg/uav_health.hpp"
 #include "interfaces/msg/uav_waypoint_command.hpp"
 
 /**
@@ -1528,4 +1534,875 @@ executor.spin();
 
     ASSERT_DEATH({ executor.spin(); }, ".*");
 }
+}
+
+/**
+ * @brief Test case for the `heartbeat_timer_callback` function in the
+ * `mission_control_package`.
+ *
+ * This test case verifies the behavior of the `heartbeat_timer_callback`
+ * function in the `mission_control_package`. It tests various scenarios related
+ * to heartbeat reception and mission state.
+ */
+TEST(mission_control_package, heartbeat_timer_callback_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test valid heartbeats
+    {
+        MissionControl mission_control_node(default_options);
+
+        ASSERT_FALSE(mission_control_node.heartbeat_received_all);
+
+        for (auto &node : mission_control_node.node_map) {
+            node.second.hb_payload.received = true;
+
+            if (node.second.is_fcc_bridge) {
+                node.second.hb_payload.active = true;
+            }
+        }
+
+        mission_control_node.heartbeat_timer_callback();
+
+        ASSERT_TRUE(mission_control_node.heartbeat_received_all);
+
+        // Check that heartbeat received flags are turned off again
+        for (auto &node : mission_control_node.node_map) {
+            ASSERT_FALSE(node.second.hb_payload.received);
+        }
+    }
+
+    // Test fcc bridge not active in selfcheck state
+    {
+        MissionControl mission_control_node(default_options);
+
+        mission_control_node.heartbeat_received_all = true;
+
+        for (auto &node : mission_control_node.node_map) {
+            node.second.hb_payload.received = true;
+        }
+
+        mission_control_node.heartbeat_timer_callback();
+
+        ASSERT_FALSE(mission_control_node.heartbeat_received_all);
+
+        // Check that heartbeat received flags are turned off again
+        for (auto &node : mission_control_node.node_map) {
+            ASSERT_FALSE(node.second.hb_payload.received);
+        }
+    }
+
+    // Test fcc bridge not active in takeoff state
+    {
+        MissionControl mission_control_node(default_options);
+        mission_control_node.set_mission_state(MissionControl::takeoff);
+
+        mission_control_node.heartbeat_received_all = true;
+
+        for (auto &node : mission_control_node.node_map) {
+            node.second.hb_payload.received = true;
+        }
+
+        ASSERT_DEATH({ mission_control_node.heartbeat_timer_callback(); },
+                     ".*");
+    }
+
+    // Test waypoint node heartbeat not received while in selfcheck state
+    {
+        MissionControl mission_control_node(default_options);
+
+        mission_control_node.heartbeat_received_all = true;
+
+        for (auto &node : mission_control_node.node_map) {
+            node.second.hb_payload.received = true;
+
+            if (node.second.is_fcc_bridge) {
+                node.second.hb_payload.active = true;
+            }
+        }
+
+        mission_control_node.node_map[common_lib::node_names::WAYPOINT]
+            .hb_payload.received = false;
+
+        mission_control_node.heartbeat_timer_callback();
+
+        ASSERT_FALSE(mission_control_node.heartbeat_received_all);
+
+        // Check that heartbeat received flags are turned off again
+        for (auto &node : mission_control_node.node_map) {
+            ASSERT_FALSE(node.second.hb_payload.received);
+        }
+    }
+
+    // Test waypoint node heartbeat not received while in takeoff state
+    {
+        MissionControl mission_control_node(default_options);
+        mission_control_node.set_mission_state(MissionControl::takeoff);
+
+        mission_control_node.heartbeat_received_all = true;
+
+        for (auto &node : mission_control_node.node_map) {
+            node.second.hb_payload.received = true;
+
+            if (node.second.is_fcc_bridge) {
+                node.second.hb_payload.active = true;
+            }
+        }
+
+        mission_control_node.node_map[common_lib::node_names::WAYPOINT]
+            .hb_payload.received = false;
+
+        ASSERT_DEATH({ mission_control_node.heartbeat_timer_callback(); },
+                     ".*");
+    }
+
+    // Test all heartbeats not received while in selfcheck state
+    {
+        MissionControl mission_control_node(default_options);
+        mission_control_node.heartbeat_received_all = true;
+
+        mission_control_node.heartbeat_timer_callback();
+
+        ASSERT_FALSE(mission_control_node.heartbeat_received_all);
+    }
+
+    // Test all heartbeats not received while in takeoff state
+    {
+        MissionControl mission_control_node(default_options);
+        mission_control_node.set_mission_state(MissionControl::takeoff);
+
+        ASSERT_DEATH({ mission_control_node.heartbeat_timer_callback(); },
+                     ".*");
+    }
+}
+
+/**
+ * @brief Test case for the `mission_control_package` position callback.
+ *
+ * This test case verifies the behavior of the position callback in the
+ * `mission_control_package`. It tests the handling of valid position messages,
+ * position messages with too old timestamps while not being 'active', and
+ * position messages with too old timestamps while being 'active'.
+ */
+TEST(mission_control_package, position_callback_test) {
+    class OpenMissionControl : public MissionControl {
+       public:
+        OpenMissionControl(const rclcpp::NodeOptions &options)
+            : MissionControl(options) {}
+
+        void open_deactivate() { deactivate(); }
+
+        void open_activate() { activate(); }
+    };
+
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test valid position message
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::GPSPosition>(
+                common_lib::topic_names::GPSPosition, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::GPSPosition msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+                    msg.latitude_deg = 1.234;
+                    msg.longitude_deg = 4.321;
+                    msg.relative_altitude_m = 10.1;
+                    msg.fix_type = interfaces::msg::GPSPosition::FIX_3D;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &message_publisher, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    const Position &pos =
+                        mission_control_node->current_position;
+
+                    ASSERT_EQ(1.234, pos.coordinate_lat);
+                    ASSERT_EQ(4.321, pos.coordinate_lon);
+                    ASSERT_EQ(1010, pos.height_cm);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test position message with too old timestamp while not being 'active'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<OpenMissionControl> mission_control_node =
+            std::make_shared<OpenMissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Deactivate Mission Control
+        mission_control_node->open_deactivate();
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::GPSPosition>(
+                common_lib::topic_names::GPSPosition, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::GPSPosition msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.latitude_deg = 1.234;
+                    msg.longitude_deg = 4.321;
+                    msg.relative_altitude_m = 10.1;
+                    msg.fix_type = interfaces::msg::GPSPosition::FIX_3D;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &message_publisher, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    const Position &pos =
+                        mission_control_node->current_position;
+
+                    ASSERT_EQ(1.234, pos.coordinate_lat);
+                    ASSERT_EQ(4.321, pos.coordinate_lon);
+                    ASSERT_EQ(1010, pos.height_cm);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test position message with too old timestamp while being 'active'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<OpenMissionControl> mission_control_node =
+            std::make_shared<OpenMissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Deactivate Mission Control
+        mission_control_node->open_activate();
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::GPSPosition>(
+                common_lib::topic_names::GPSPosition, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::GPSPosition msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.latitude_deg = 1.234;
+                    msg.longitude_deg = 4.321;
+                    msg.relative_altitude_m = 10.1;
+                    msg.fix_type = interfaces::msg::GPSPosition::FIX_3D;
+
+                    message_publisher->publish(msg);
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        ASSERT_DEATH({ executor.spin(); }, ".*");
+    }
+}
+
+/**
+ * @brief Test case for the mission_progress_callback_test.
+ *
+ * This test case verifies the behavior of the mission_progress_callback_test
+ * function. It tests the mission progress message with a valid timestamp and an
+ * invalid timestamp. The test creates a mission control node and a test node,
+ * and publishes mission progress messages. It checks if the mission progress
+ * counter is updated correctly and asserts that the mission progress is
+ * increasing.
+ */
+TEST(mission_control_package, mission_progress_callback_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test valid mission progress message
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Explicitly set mission progress to 0
+        mission_control_node->mission_progress = 0.0;
+
+        float mission_progress_counter = 0.0;
+        float last_mission_progress_counter = 0.0;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::MissionProgress>(
+                common_lib::topic_names::MissionProgress, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(50),
+                [test_node, &message_publisher, &mission_progress_counter]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    if (mission_progress_counter < 1.0) {
+                        mission_progress_counter += 0.2;
+                    }
+
+                    // Create and publish message
+                    interfaces::msg::MissionProgress msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+                    msg.progress = mission_progress_counter;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr check_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [mission_control_node, &last_mission_progress_counter]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Checking progress counter");
+
+                    ASSERT_GE(mission_control_node->mission_progress,
+                              last_mission_progress_counter);
+
+                    last_mission_progress_counter =
+                        mission_control_node->mission_progress;
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(300),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test mission progress message with invalid timestamp
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Explicitly set mission progress to 0
+        mission_control_node->mission_progress = 0.0;
+
+        float mission_progress_counter = 0.0;
+        float last_mission_progress_counter = 0.0;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::MissionProgress>(
+                common_lib::topic_names::MissionProgress, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(50),
+                [test_node, &message_publisher, &mission_progress_counter]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    if (mission_progress_counter < 1.0) {
+                        mission_progress_counter += 0.2;
+                    }
+
+                    // Create and publish message
+                    interfaces::msg::MissionProgress msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.progress = mission_progress_counter;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr check_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [mission_control_node, &last_mission_progress_counter]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Checking progress counter");
+
+                    ASSERT_GE(mission_control_node->mission_progress,
+                              last_mission_progress_counter);
+
+                    last_mission_progress_counter =
+                        mission_control_node->mission_progress;
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(300),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+}
+
+/**
+ * @brief Test case for the flight_state_callback_test.
+ *
+ * This test case verifies the behavior of the flight_state_callback_test
+ * function. It tests the handling of valid and invalid flight state messages by
+ * the MissionControl class. The test creates a test node that publishes flight
+ * state messages and checks if the MissionControl class correctly handles the
+ * messages and updates its internal state variables.
+ */
+TEST(mission_control_package, flight_state_callback_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test valid flight state message
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::FlightState>(
+                common_lib::topic_names::FlightState, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::FlightState msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+
+                    interfaces::msg::FlightMode flight_mode_msg;
+                    flight_mode_msg.mode = interfaces::msg::FlightMode::HOLD;
+
+                    interfaces::msg::LandedState landed_state_msg;
+                    landed_state_msg.state =
+                        interfaces::msg::LandedState::ON_GROUND;
+
+                    msg.mode = flight_mode_msg;
+                    msg.state = landed_state_msg;
+
+                    msg.armed = false;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    ASSERT_EQ(interfaces::msg::FlightMode::HOLD,
+                              mission_control_node->current_flight_mode);
+
+                    ASSERT_EQ(interfaces::msg::LandedState::ON_GROUND,
+                              mission_control_node->current_landed_state);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test flight state message with invalid timestamp
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::FlightState>(
+                common_lib::topic_names::FlightState, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::FlightState msg;
+                    msg.sender_id = test_node->get_name();
+
+                    interfaces::msg::FlightMode flight_mode_msg;
+                    flight_mode_msg.mode = interfaces::msg::FlightMode::HOLD;
+
+                    interfaces::msg::LandedState landed_state_msg;
+                    landed_state_msg.state =
+                        interfaces::msg::LandedState::ON_GROUND;
+
+                    msg.mode = flight_mode_msg;
+                    msg.state = landed_state_msg;
+
+                    msg.armed = false;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    ASSERT_EQ(interfaces::msg::FlightMode::UNKNOWN,
+                              mission_control_node->current_flight_mode);
+
+                    ASSERT_EQ(interfaces::msg::LandedState::UNKNOWN,
+                              mission_control_node->current_landed_state);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+}
+
+/**
+ * @brief Test case for the `mission_control_package` health callback.
+ *
+ * This test case verifies the behavior of the health callback in the
+ * `mission_control_package`. It tests various scenarios by publishing different
+ * health messages and checking the resulting drone health status.
+ */
+TEST(mission_control_package, health_callback_test) {
+    rclcpp::NodeOptions default_options;
+    default_options.append_parameter_override(
+        "MDF_FILE_PATH",
+        "../../src/mission_control_package/test/mission_file_reader/"
+        "test_assets/mdf_correct.json");
+
+    // Test valid health message with all flags set to true
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Check that drone health is not ok on init
+        ASSERT_FALSE(mission_control_node->drone_health_ok);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVHealth>(
+                common_lib::topic_names::UAVHealth, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVHealth msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+                    msg.is_gyrometer_calibration_ok = true;
+                    msg.is_accelerometer_calibration_ok = true;
+                    msg.is_magnetometer_calibration_ok = true;
+                    msg.is_local_position_ok = true;
+                    msg.is_global_position_ok = true;
+                    msg.is_home_position_ok = true;
+                    msg.is_armable = true;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    ASSERT_TRUE(mission_control_node->drone_health_ok);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test health message with invalid timestamp
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Check that drone health is not ok on init
+        ASSERT_FALSE(mission_control_node->drone_health_ok);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVHealth>(
+                common_lib::topic_names::UAVHealth, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVHealth msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.is_gyrometer_calibration_ok = true;
+                    msg.is_accelerometer_calibration_ok = true;
+                    msg.is_magnetometer_calibration_ok = true;
+                    msg.is_local_position_ok = true;
+                    msg.is_global_position_ok = true;
+                    msg.is_home_position_ok = true;
+                    msg.is_armable = true;
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    ASSERT_FALSE(mission_control_node->drone_health_ok);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
+
+    // Test health message with one flag set to false and all set to false
+    for (size_t unavail_flag = 0; unavail_flag < 8; unavail_flag++) {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<MissionControl> mission_control_node =
+            std::make_shared<MissionControl>(default_options);
+
+        // Deactivate event loop so it doesn't mess with our test
+        mission_control_node->event_loop_active = false;
+
+        // Check that drone health is not ok on init
+        ASSERT_FALSE(mission_control_node->drone_health_ok);
+
+        // Create test node
+        std::shared_ptr<rclcpp::Node> test_node =
+            std::make_shared<rclcpp::Node>("test_node");
+
+        const auto message_publisher =
+            test_node->create_publisher<interfaces::msg::UAVHealth>(
+                common_lib::topic_names::UAVHealth, 10);
+
+        rclcpp::TimerBase::SharedPtr trigger_timer =
+            test_node->create_wall_timer(
+                std::chrono::milliseconds(10),
+                [test_node, &message_publisher, &unavail_flag]() {
+                    RCLCPP_DEBUG(test_node->get_logger(), "Publishing message");
+
+                    // Create and publish message
+                    interfaces::msg::UAVHealth msg;
+                    msg.sender_id = test_node->get_name();
+                    msg.time_stamp = test_node->now();
+                    msg.is_gyrometer_calibration_ok = true;
+                    msg.is_accelerometer_calibration_ok = true;
+                    msg.is_magnetometer_calibration_ok = true;
+                    msg.is_local_position_ok = true;
+                    msg.is_global_position_ok = true;
+                    msg.is_home_position_ok = true;
+                    msg.is_armable = true;
+
+                    switch (unavail_flag) {
+                        case 0:
+                            msg.is_gyrometer_calibration_ok = false;
+                            break;
+                        case 1:
+                            msg.is_accelerometer_calibration_ok = false;
+                            break;
+                        case 2:
+                            msg.is_magnetometer_calibration_ok = false;
+                            break;
+                        case 3:
+                            msg.is_local_position_ok = false;
+                            break;
+                        case 4:
+                            msg.is_global_position_ok = false;
+                            break;
+                        case 5:
+                            msg.is_home_position_ok = false;
+                            break;
+                        case 6:
+                            msg.is_armable = false;
+                            break;
+                        case 7:
+                            msg.is_gyrometer_calibration_ok = false;
+                            msg.is_accelerometer_calibration_ok = false;
+                            msg.is_magnetometer_calibration_ok = false;
+                            msg.is_local_position_ok = false;
+                            msg.is_global_position_ok = false;
+                            msg.is_home_position_ok = false;
+                            msg.is_armable = false;
+                            break;
+                    }
+
+                    message_publisher->publish(msg);
+                });
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(60),
+                [mission_control_node, &executor]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending test");
+
+                    ASSERT_FALSE(mission_control_node->drone_health_ok);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.add_node(test_node);
+
+        executor.spin();
+    }
 }

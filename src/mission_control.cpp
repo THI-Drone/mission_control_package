@@ -175,6 +175,9 @@ void MissionControl::event_loop() {
         case detect_marker:
             mode_detect_marker();
             break;
+        case set_marker:
+            mode_set_marker();
+            break;
         default:
             RCLCPP_ERROR(this->get_logger(),
                          "MissionControl::%s: Unknown mission_state: %d",

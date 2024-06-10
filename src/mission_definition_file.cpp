@@ -238,6 +238,7 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                     marker_name + "' must have at least one command");
 
             bool detect_marker_command_found = false;
+            bool set_marker_command_found = false;
 
             for (const auto &[key, val] : marker_content.items()) {
                 // Loop through every command in the marker
@@ -317,7 +318,6 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                     } else if (marker_type == "detect_marker") {
                         // Check that only max. one 'detect_marker' command
                         // exists per marker
-
                         if (detect_marker_command_found) {
                             throw std::runtime_error(
                                 "MissionDefinitionReader::" +
@@ -326,7 +326,91 @@ void MissionDefinitionReader::read_file(const std::string &file_path,
                                 "max. once per marker");
                         }
 
+                        // Check that no 'set_marker' command exists in the
+                        // same marker
+                        if (set_marker_command_found) {
+                            throw std::runtime_error(
+                                "MissionDefinitionReader::" +
+                                (std::string) __func__ +
+                                ": 'detect_marker' command can not exist "
+                                "co-exist "
+                                "with "
+                                "a 'set_marker' command in the same marker");
+                        }
+
                         detect_marker_command_found = true;
+                    } else if (marker_type == "set_marker") {
+                        // Check that no 'detect_marker' command exists in the
+                        // same marker
+                        if (detect_marker_command_found) {
+                            throw std::runtime_error(
+                                "MissionDefinitionReader::" +
+                                (std::string) __func__ +
+                                ": 'set_marker' command can not exist co-exist "
+                                "with "
+                                "a 'detect_marker' command in the same marker");
+                        }
+
+                        // Check that only max. one 'set_marker' command
+                        // exists per marker
+                        if (set_marker_command_found) {
+                            throw std::runtime_error(
+                                "MissionDefinitionReader::" +
+                                (std::string) __func__ +
+                                ": 'set_marker' commands can only appear "
+                                "max. once per marker");
+                        }
+
+                        // Check that marker name exists
+                        {
+                            const std::string marker_name =
+                                json_marker_data["marker_name"];
+
+                            if (!markers_json.contains(marker_name)) {
+                                std::string valid_marker_names;
+
+                                {
+                                    size_t i = 0;
+                                    for (const auto &[key, val] :
+                                         markers_json.items()) {
+                                        if (i > 0) valid_marker_names += ", ";
+                                        valid_marker_names += key;
+                                        i++;
+                                    }
+                                }
+
+                                throw std::runtime_error(
+                                    "MissionDefinitionReader::" +
+                                    (std::string) __func__ +
+                                    ": The marker name in the 'set_marker' "
+                                    "command doesn't exist: '" +
+                                    marker_name +
+                                    "'. Valid markers: " + valid_marker_names);
+                            }
+                        }
+
+                        set_marker_command_found = true;
+                    } else if (marker_type == "end_mission") {
+                        // Check if a 'detect_marker' or 'set_marker' command
+                        // was specified before, as an 'end_mission' after those
+                        // commands doesn't make sense
+
+                        if (detect_marker_command_found) {
+                            throw std::runtime_error(
+                                "MissionDefinitionReader::" +
+                                (std::string) __func__ +
+                                ": 'detect_marker' command can not be "
+                                "specified in a marker with an 'end_mission' "
+                                "command");
+                        }
+
+                        if (set_marker_command_found) {
+                            throw std::runtime_error(
+                                "MissionDefinitionReader::" +
+                                (std::string) __func__ +
+                                ": 'set_marker' command can not be specified "
+                                "in a marker with an 'end_mission' command");
+                        }
                     }
                 }
             }
