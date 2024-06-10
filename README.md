@@ -1,5 +1,7 @@
 # Mission Control
 
+Version: `1.1.0`
+
 The Mission Control node is responsible for the main mission logic.
 It gathers all required information from the different nodes and chooses the next action.
 

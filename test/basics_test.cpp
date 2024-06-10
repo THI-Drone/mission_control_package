@@ -858,6 +858,8 @@ TEST(mission_control_package, get_mission_state_str_test) {
                      "fly_to_waypoint");
         ASSERT_STREQ(mc.get_mission_state_str(MissionControl::detect_marker),
                      "detect_marker");
+        ASSERT_STREQ(mc.get_mission_state_str(MissionControl::set_marker),
+                     "set_marker");
     }
 
     // Test with invalid mission state

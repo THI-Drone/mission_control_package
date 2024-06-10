@@ -540,6 +540,7 @@ TEST(mission_control_package, event_loop_test) {
         size_t mode_decision_maker_counter = 0;
         size_t mode_fly_to_waypoint_counter = 0;
         size_t mode_detect_marker_counter = 0;
+        size_t mode_set_marker_counter = 0;
 
        public:
         CustomMissionControl(
@@ -594,6 +595,13 @@ TEST(mission_control_package, event_loop_test) {
 
             mode_detect_marker_counter++;
         }
+
+        void mode_set_marker() override {
+            RCLCPP_DEBUG(this->get_logger(), "Custom function '%s' called",
+                         __func__);
+
+            mode_set_marker_counter++;
+        }
     };
 
     // Check state 'prepare_mission'
@@ -633,6 +641,7 @@ TEST(mission_control_package, event_loop_test) {
                         0, mission_control_node->mode_fly_to_waypoint_counter);
                     ASSERT_EQ(0,
                               mission_control_node->mode_detect_marker_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_set_marker_counter);
 
                     executor.cancel();
                 });
@@ -677,6 +686,7 @@ TEST(mission_control_package, event_loop_test) {
                         0, mission_control_node->mode_fly_to_waypoint_counter);
                     ASSERT_EQ(0,
                               mission_control_node->mode_detect_marker_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_set_marker_counter);
 
                     executor.cancel();
                 });
@@ -722,6 +732,7 @@ TEST(mission_control_package, event_loop_test) {
                         0, mission_control_node->mode_fly_to_waypoint_counter);
                     ASSERT_EQ(0,
                               mission_control_node->mode_detect_marker_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_set_marker_counter);
 
                     executor.cancel();
                 });
@@ -764,6 +775,7 @@ TEST(mission_control_package, event_loop_test) {
                         0, mission_control_node->mode_fly_to_waypoint_counter);
                     ASSERT_EQ(0,
                               mission_control_node->mode_detect_marker_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_set_marker_counter);
 
                     executor.cancel();
                 });
@@ -807,6 +819,7 @@ TEST(mission_control_package, event_loop_test) {
                         0, mission_control_node->mode_fly_to_waypoint_counter);
                     ASSERT_EQ(0,
                               mission_control_node->mode_detect_marker_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_set_marker_counter);
 
                     executor.cancel();
                 });
@@ -851,6 +864,7 @@ TEST(mission_control_package, event_loop_test) {
                         0, mission_control_node->mode_fly_to_waypoint_counter);
                     ASSERT_EQ(0,
                               mission_control_node->mode_detect_marker_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_set_marker_counter);
 
                     executor.cancel();
                 });
@@ -896,6 +910,7 @@ TEST(mission_control_package, event_loop_test) {
                         0, mission_control_node->mode_decision_maker_counter);
                     ASSERT_EQ(0,
                               mission_control_node->mode_detect_marker_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_set_marker_counter);
 
                     executor.cancel();
                 });
@@ -939,6 +954,52 @@ TEST(mission_control_package, event_loop_test) {
                         0, mission_control_node->mode_decision_maker_counter);
                     ASSERT_EQ(
                         0, mission_control_node->mode_fly_to_waypoint_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_set_marker_counter);
+
+                    executor.cancel();
+                });
+
+        executor.add_node(mission_control_node);
+        executor.spin();
+    }
+
+    // Check state 'set_marker'
+    {
+        rclcpp::executors::SingleThreadedExecutor executor;
+
+        std::shared_ptr<CustomMissionControl> mission_control_node =
+            std::make_shared<CustomMissionControl>(default_options);
+
+        mission_control_node->set_mission_state(MissionControl::set_marker);
+
+        const uint32_t timer_executions = 5;
+
+        rclcpp::TimerBase::SharedPtr end_timer =
+            mission_control_node->create_wall_timer(
+                std::chrono::milliseconds(
+                    mission_control_node->event_loop_time_delta_ms *
+                    timer_executions),
+                [mission_control_node, &executor, timer_executions]() {
+                    RCLCPP_DEBUG(mission_control_node->get_logger(),
+                                 "Ending event loop test");
+
+                    // Check that counts are correct
+                    ASSERT_EQ(timer_executions,
+                              mission_control_node->mode_set_marker_counter);
+
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_prepare_mission_counter);
+                    ASSERT_EQ(0, mission_control_node->mode_self_check_counter);
+                    ASSERT_EQ(0, mission_control_node
+                                     ->mode_check_drone_configuration_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->initiate_takeoff_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_decision_maker_counter);
+                    ASSERT_EQ(
+                        0, mission_control_node->mode_fly_to_waypoint_counter);
+                    ASSERT_EQ(0,
+                              mission_control_node->mode_detect_marker_counter);
 
                     executor.cancel();
                 });

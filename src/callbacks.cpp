@@ -483,6 +483,12 @@ void MissionControl::heartbeat_timer_callback() {
                 "'" +
                 get_mission_state_str(selfcheck) + "' or '" +
                 get_mission_state_str(prepare_mission) + "' state");
+        } else {
+            RCLCPP_DEBUG(this->get_logger(),
+                         "MissionControl::%s: Missing heartbeat or FCC bridge "
+                         "not active while in '%s' state. Ignoring this fact "
+                         "in this state.",
+                         __func__, get_mission_state_str());
         }
     }
 }
