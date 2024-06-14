@@ -374,7 +374,6 @@ void MissionControl::initiate_takeoff() {
         // Deactivate Mission Control
         this->deactivate();
         send_control_json(this->get_name(), false, {});
-        clear_active_node_id();
 
         set_mission_state(decision_maker);
         RCLCPP_INFO(this->get_logger(),
